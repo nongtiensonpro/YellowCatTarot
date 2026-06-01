@@ -3,6 +3,22 @@
 import React, { useState, useEffect } from 'react';
 import { useApiKey } from './ApiKeyProvider';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Image from 'next/image';
+import CardBack from './CardBack';
+
+const CARD_BACKS = [
+  { id: 'default', name: 'Ngẫu Nhiên Ghibli', filename: 'Backofthecard4.jpeg' }, // Nút chọn ngẫu nhiên mặc định
+  { id: 'Waite–Smith_Tarot_Roses_and_Lilies_cropped.jpg', name: 'Rider-Waite Gốc', filename: 'Waite–Smith_Tarot_Roses_and_Lilies_cropped.jpg' },
+  { id: 'ghibli-svg', name: 'Ghibli Hoạt Họa', isSvg: true },
+  { id: 'Backofthecard1.jpeg', name: 'Hoàng Hôn Ghibli', filename: 'Backofthecard1.jpeg' },
+  { id: 'Backofthecard2.jpeg', name: 'Ban Mai Yên Bình', filename: 'Backofthecard2.jpeg' },
+  { id: 'Backofthecard3.jpeg', name: 'Đêm Sao Lấp Lánh', filename: 'Backofthecard3.jpeg' },
+  { id: 'Backofthecard4.jpeg', name: 'Mèo Con Du Hí', filename: 'Backofthecard4.jpeg' },
+  { id: 'Backofthecard5.jpeg', name: 'Khu Vườn Bí Mật', filename: 'Backofthecard5.jpeg' },
+  { id: 'Backofthecard7.jpeg', name: 'Hành Tinh Kỳ Ảo', filename: 'Backofthecard7.jpeg' },
+  { id: 'Backofthecard8.jpeg', name: 'Bình Minh Đảo Hoang', filename: 'Backofthecard8.jpeg' },
+  { id: 'Backofthecard9.jpeg', name: 'Dưới Bóng Anh Đào', filename: 'Backofthecard9.jpeg' },
+];
 
 const MODELS = [
   { value: 'gemini-flash-latest', label: 'Gemini Flash Latest (Nhanh & Mặc Định)' },
@@ -20,9 +36,19 @@ interface ApiKeyModalProps {
 }
 
 export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
-  const { apiKey, setApiKey, preferredModel, setPreferredModel, isKeyValid, setIsKeyValid } = useApiKey();
+  const {
+    apiKey,
+    setApiKey,
+    preferredModel,
+    setPreferredModel,
+    isKeyValid,
+    setIsKeyValid,
+    preferredCardBack,
+    setPreferredCardBack,
+  } = useApiKey();
   const [inputKey, setInputKey] = useState(apiKey);
   const [selectedModel, setSelectedModel] = useState(preferredModel);
+  const [selectedCardBack, setSelectedCardBack] = useState(preferredCardBack);
   const [testingStatus, setTestingStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -30,10 +56,11 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
     if (isOpen) {
       setInputKey(apiKey);
       setSelectedModel(preferredModel);
+      setSelectedCardBack(preferredCardBack);
       setTestingStatus('idle');
       setErrorMessage('');
     }
-  }, [isOpen, apiKey, preferredModel]);
+  }, [isOpen, apiKey, preferredModel, preferredCardBack]);
 
   if (!isOpen) return null;
 
@@ -74,6 +101,7 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
   const handleSave = () => {
     setApiKey(inputKey);
     setPreferredModel(selectedModel);
+    setPreferredCardBack(selectedCardBack);
     onClose();
   };
 
@@ -157,6 +185,69 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Card Back Selector */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-text-secondary tracking-wider font-semibold uppercase flex items-center gap-1">
+              🎨 Thiết Kế Mặt Sau Lá Bài (Card Backs)
+            </label>
+            <div className="grid grid-cols-3 gap-2.5 max-h-[175px] overflow-y-auto pr-1 select-none scrollbar-thin scrollbar-thumb-gold-primary/30 scrollbar-track-transparent">
+              {CARD_BACKS.map((item) => {
+                const isSelected = selectedCardBack === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedCardBack(item.id)}
+                    className={`group relative flex flex-col items-center bg-bg-elevated/35 rounded-xl p-1.5 border transition-all duration-300 ${
+                      isSelected
+                        ? 'border-gold-primary shadow-[0_0_10px_rgba(244,162,97,0.25)] bg-gold-primary/5'
+                        : 'border-gold-primary/10 hover:border-gold-primary/40 hover:bg-bg-elevated/60'
+                    }`}
+                  >
+                    {/* Tiny visual card preview with 9:16 aspect ratio */}
+                    <div className="relative w-full aspect-[9/16] rounded-lg overflow-hidden border border-gold-primary/15 flex items-center justify-center bg-bg-deep shadow-inner">
+                      {item.isSvg ? (
+                        <CardBack className="border-0 p-0.5 scale-[0.95]" />
+                      ) : (
+                        <Image
+                          src={`/cards/Backofthecard/${item.filename}`}
+                          alt={item.name}
+                          fill
+                          sizes="(max-width: 640px) 70px, 100px"
+                          className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      )}
+
+                      {/* Random indicator overlay badge */}
+                      {item.id === 'default' && (
+                        <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center gap-1 text-[10px] text-gold-light font-bold font-sans pointer-events-none">
+                          <span className="text-base animate-bounce">🎲</span>
+                          <span className="uppercase tracking-wider text-[9px]">Ngẫu Nhiên</span>
+                        </div>
+                      )}
+
+                      {/* Selected checkmark overlay */}
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 z-20 w-4 h-4 bg-gold-primary text-bg-deep rounded-full flex items-center justify-center shadow-md animate-[scaleIn_0.15s_ease-out]">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-2.5 h-2.5">
+                            <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+
+                      {/* Accent gold overlay border inside container */}
+                      <div className="absolute inset-0.5 border border-gold-light/10 pointer-events-none rounded-[6px]" />
+                    </div>
+
+                    <span className="text-[10.5px] font-sans font-medium text-text-secondary mt-1.5 truncate w-full text-center group-hover:text-gold-light transition-colors">
+                      {item.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

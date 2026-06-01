@@ -9,6 +9,8 @@ interface ApiKeyContextType {
   setPreferredModel: (model: string) => void;
   isKeyValid: boolean | null;
   setIsKeyValid: (valid: boolean | null) => void;
+  preferredCardBack: string;
+  setPreferredCardBack: (back: string) => void;
 }
 
 const ApiKeyContext = createContext<ApiKeyContextType | undefined>(undefined);
@@ -16,18 +18,23 @@ const ApiKeyContext = createContext<ApiKeyContextType | undefined>(undefined);
 export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, _setApiKey] = useState<string>('');
   const [preferredModel, setPreferredModel] = useState<string>('gemini-flash-latest');
+  const [preferredCardBack, setPreferredCardBack] = useState<string>('default');
   const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
 
   // Load key from sessionStorage on client mount
   useEffect(() => {
     const savedKey = sessionStorage.getItem('gemini_api_key') || '';
     const savedModel = sessionStorage.getItem('gemini_preferred_model') || 'gemini-flash-latest';
+    const savedCardBack = sessionStorage.getItem('gemini_preferred_card_back') || 'default';
     if (savedKey) {
       _setApiKey(savedKey);
       setIsKeyValid(true); // Giả định ban đầu là đúng
     }
     if (savedModel) {
       setPreferredModel(savedModel);
+    }
+    if (savedCardBack) {
+      setPreferredCardBack(savedCardBack);
     }
   }, []);
 
@@ -47,6 +54,11 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.setItem('gemini_preferred_model', model);
   };
 
+  const updatePreferredCardBack = (back: string) => {
+    setPreferredCardBack(back);
+    sessionStorage.setItem('gemini_preferred_card_back', back);
+  };
+
   return (
     <ApiKeyContext.Provider
       value={{
@@ -56,6 +68,8 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
         setPreferredModel: updatePreferredModel,
         isKeyValid,
         setIsKeyValid,
+        preferredCardBack,
+        setPreferredCardBack: updatePreferredCardBack,
       }}
     >
       {children}
