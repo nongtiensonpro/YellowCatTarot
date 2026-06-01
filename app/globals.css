@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+@theme {
+  /* Ghibli Backgrounds */
+  --color-bg-deep: #0d0d1a;
+  --color-bg-mid: #12122a;
+  --color-bg-surface: #1a1a3e;
+  --color-bg-elevated: #22224a;
+
+  /* Mèo Vàng Gold colors */
+  --color-gold-primary: #f4a261;
+  --color-gold-light: #ffd166;
+  --color-gold-dark: #e76f51;
+  --color-gold-glow: rgba(244, 162, 97, 0.3);
+
+  /* Ghibli accents */
+  --color-mystic-purple: #9b5de5;
+  --color-forest-green: #2d6a4f;
+  --color-ghibli-sky: #b7d4e7;
+  --color-star-white: #fff8dc;
+
+  /* Texts */
+  --color-text-primary: #f8f4e3;
+  --color-text-secondary: #c9b89a;
+  --color-text-accent: #ffd166;
+
+  /* Font mappings */
+  --font-cinzel: var(--font-cinzel), serif;
+  --font-cinzel-decorative: var(--font-cinzel-decorative), serif;
+  --font-lora: var(--font-literata), serif;
+  --font-inter: var(--font-nunito), sans-serif;
+}
+
+/* Custom animations and styling */
+@utility perspective-1000 {
+  perspective: 1000px;
+}
+
+@utility transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+@utility backface-hidden {
+  backface-visibility: hidden;
+}
+
+@utility rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Custom global keyframes */
+@keyframes particleDust {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(50px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes starTwinkle {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(244, 162, 97, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(244, 162, 97, 0.5);
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Character Animation Keyframes */
+@keyframes tailWag {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+}
+
+@keyframes earTwitch {
+  0%, 90%, 100% {
+    transform: rotate(0deg);
+  }
+  93% {
+    transform: rotate(-5deg);
+  }
+  96% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes eyeBlink {
+  0%, 95%, 100% {
+    transform: scaleY(1);
+  }
+  97.5% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes zzzFloat {
+  0% {
+    transform: translate(0, 0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(30px, -70px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes crystalGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px rgba(183, 212, 231, 0.4)) drop-shadow(0 0 10px rgba(155, 93, 229, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 15px rgba(183, 212, 231, 0.7)) drop-shadow(0 0 25px rgba(155, 93, 229, 0.6));
+  }
+}
+
+/* Animations helper classes */
+.animate-tail {
+  animation: tailWag 3s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.animate-ear {
+  animation: earTwitch 6s ease-in-out infinite;
+}
+
+.animate-eye {
+  animation: eyeBlink 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.animate-zzz {
+  animation: zzzFloat 4s ease-in-out infinite;
+}
+
+.animate-crystal {
+  animation: crystalGlow 3s ease-in-out infinite;
+}
+
+.bg-ghibli-stars {
+  background-image: 
+    radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+    radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+    radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px);
+  background-size: 550px 550px, 350px 350px, 250px 250px;
+  background-position: 0 0, 40px 60px, 130px 270px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0d1a;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a1a3e;
+  border-radius: 4px;
+  border: 1px solid #22224a;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ffd166;
+}
+
