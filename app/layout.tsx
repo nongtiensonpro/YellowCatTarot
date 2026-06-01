@@ -1,31 +1,25 @@
 import type { Metadata } from "next";
-import { Cinzel, Cinzel_Decorative, Literata, Nunito } from "next/font/google";
+import { Cinzel, Cinzel_Decorative, Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import { ApiKeyProvider } from "@/components/ApiKeyProvider";
 import Navigation from "@/components/Navigation";
 
 const cinzel = Cinzel({
   subsets: ["latin"],
-  variable: "--font-cinzel",
+  variable: "--next-font-cinzel",
   weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 const cinzelDecorative = Cinzel_Decorative({
   subsets: ["latin"],
-  variable: "--font-cinzel-decorative",
+  variable: "--next-font-cinzel-decorative",
   weight: ["400", "700", "900"],
 });
 
-const literata = Literata({
+const beVietnamPro = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
-  variable: "--font-literata",
+  variable: "--next-font-be-vietnam-pro",
   weight: ["300", "400", "500", "600", "700", "800", "900"],
-});
-
-const nunito = Nunito({
-  subsets: ["latin", "vietnamese"],
-  variable: "--font-nunito",
-  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -48,7 +42,7 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${cinzel.variable} ${cinzelDecorative.variable} ${literata.variable} ${nunito.variable} h-full antialiased dark`}
+      className={`${cinzel.variable} ${cinzelDecorative.variable} ${beVietnamPro.variable} h-full antialiased dark`}
     >
       <head>
         <script

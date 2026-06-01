@@ -25,10 +25,10 @@
   --color-text-accent: #ffd166;
 
   /* Font mappings */
-  --font-cinzel: var(--font-cinzel), serif;
-  --font-cinzel-decorative: var(--font-cinzel-decorative), serif;
-  --font-lora: var(--font-literata), serif;
-  --font-inter: var(--font-nunito), sans-serif;
+  --font-cinzel: var(--next-font-be-vietnam-pro), sans-serif;
+  --font-cinzel-decorative: var(--next-font-be-vietnam-pro), sans-serif;
+  --font-lora: var(--next-font-be-vietnam-pro), sans-serif;
+  --font-inter: var(--next-font-be-vietnam-pro), sans-serif;
 }
 
 /* Custom animations and styling */

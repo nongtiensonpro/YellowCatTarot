@@ -16,6 +16,7 @@ export default function Navigation() {
     { href: '/', label: 'Trang Chủ' },
     { href: '/cards', label: 'Tra Cứu 78 Lá' },
     { href: '/reading', label: 'Trải Bài Tarot' },
+    { href: '/meo-vang', label: 'Hồ Sơ Mèo Vàng' },
   ];
 
   const isActive = (href: string) => {
@@ -34,25 +35,12 @@ export default function Navigation() {
             <div className="flex items-center">
               <Link href="/" className="flex items-center gap-2.5 group focus:outline-none">
                 {/* Micro Animated Cat Logo */}
-                <div className="relative w-8 h-8 rounded-full border border-gold-light/40 bg-bg-surface flex items-center justify-center p-0.5 group-hover:border-gold-light/80 transition-all duration-300">
-                  <svg
-                    viewBox="0 0 100 100"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-full h-full drop-shadow-[0_0_2px_rgba(244,162,97,0.5)]"
-                  >
-                    {/* Crescent Moon */}
-                    <path
-                      d="M60 25C52 25 44 30 40 38C36 46 38 55 44 61C50 67 59 69 66 65C58 70 48 68 40 62C32 55 30 45 34 36C38 27 48 22 60 25Z"
-                      fill="#ffd166"
-                    />
-                    {/* Tiny sitting cat */}
-                    <path
-                      d="M54 48C51.5 48 49.5 50.5 49.5 53C49.5 55 51 57.5 48.5 60C47.2 61.5 44 61.5 42.5 63C41 64.5 42 66.5 42.5 67.5C43 68.5 44.5 69.5 47 69.5C51 69.5 53.5 67 55 65.5C56 66.5 57 67.5 58.5 67.5C60 67.5 61.5 67 62.5 66C63 67 64 67.5 65.5 67.5C67 67.5 69 64.5 68 62.5C67.5 61.5 64.5 60 64 58.5C63.5 57 63 54.5 63 52.5C63 49.5 61.5 48 59.5 48C58 48 57 49 56 49.5C55 49.5 54.5 48 54 48Z"
-                      fill="#f4a261"
-                      className="animate-tail"
-                    />
-                  </svg>
+                <div className="relative w-9 h-9 rounded-full border border-gold-light/40 bg-bg-surface overflow-hidden flex items-center justify-center group-hover:border-gold-light/80 transition-all duration-300 shadow-md">
+                  <img
+                    src="/meo-vang-logo.png"
+                    alt="Tarot Mèo Vàng Logo"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
                 </div>
                 <span className="font-cinzel font-bold text-base md:text-lg tracking-wider text-gold-primary group-hover:text-gold-light transition-colors duration-200">
                   TAROT MÈO VÀNG
