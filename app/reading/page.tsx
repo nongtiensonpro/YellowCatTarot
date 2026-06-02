@@ -140,6 +140,35 @@ export default function ReadingHub() {
               </div>
             </Link>
 
+            {/* Option 5: Free Tarot Reading Mode */}
+            <Link
+              href="/reading/free"
+              className="group bg-bg-surface/30 border border-gold-primary/20 hover:border-gold-light/60 rounded-2xl p-5 shadow-xl flex gap-5 items-center transition-all duration-300 hover:-translate-y-1 hover:bg-bg-surface/50 hover:shadow-[0_0_15px_rgba(244,162,97,0.15)] cursor-pointer relative overflow-hidden"
+            >
+              {/* Shimmer light effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_2.5s_infinite] pointer-events-none" />
+              
+              <div className="w-12 h-16 rounded-lg bg-gold-primary/10 border border-gold-primary/30 flex items-center justify-center text-gold-primary text-xl font-bold font-sans group-hover:bg-gold-primary/25 transition-all">
+                🎨
+              </div>
+              <div className="flex-1 flex flex-col gap-1 text-left font-lora">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-cinzel font-bold text-base md:text-lg text-text-primary group-hover:text-gold-light transition-colors">
+                    Không Gian Tự Trải Bài (Chế Độ Tự Do)
+                  </h3>
+                  <span className="px-2 py-0.5 text-[8px] font-sans font-semibold tracking-wider rounded bg-white/5 border border-white/10 text-text-secondary uppercase select-none">
+                    Tự Luận Giải ✏️
+                  </span>
+                </div>
+                <p className="text-xs md:text-sm text-text-secondary leading-relaxed">
+                  Tự do nhặt bài độc lập qua 3 vòng riêng biệt (tối đa 20 lá/vòng, các vòng bài có thể trùng nhau). Không gian yên tĩnh không Mèo Vàng, tích hợp Cuốn Nhật Ký parchment cổ điển để tự đúc kết.
+                </p>
+              </div>
+              <div className="text-gold-primary group-hover:translate-x-1.5 transition-transform duration-200">
+                ➔
+              </div>
+            </Link>
+
           </div>
 
         </div>

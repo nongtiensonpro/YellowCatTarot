@@ -71,7 +71,7 @@ export default function YellowCat3D({
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[75%] h-[10%] bg-black/35 rounded-full blur-sm -z-10 pointer-events-none" />
 
         <Canvas
-          shadows
+          shadows="percentage"
           camera={{ position: [0, 0.1, 2.1], fov: 40 }}
           gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
           dpr={[1, 2]}

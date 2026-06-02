@@ -56,6 +56,7 @@ export default function RootLayout({
                     args[0] &&
                     typeof args[0] === 'string' &&
                     (args[0].indexOf('THREE.Clock') !== -1 ||
+                     args[0].indexOf('Clock: This module') !== -1 ||
                      args[0].indexOf('PCFSoftShadowMap') !== -1 ||
                      args[0].indexOf('WebGLShadowMap') !== -1 ||
                      args[0].indexOf('THREE.WebGLRenderer: Context Lost') !== -1)
