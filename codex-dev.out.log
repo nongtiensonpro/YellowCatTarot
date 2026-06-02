@@ -1,0 +1,14 @@
+
+> yellow-cat-tarot@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.233:3000
+✓ Ready in 529ms
+
+ GET /reading/free 200 in 592ms (next.js: 250ms, application-code: 341ms)
+ GET /reading/free 200 in 206ms (next.js: 4ms, application-code: 202ms)
+ GET / 200 in 149ms (next.js: 34ms, application-code: 115ms)
+ GET /reading/free 200 in 90ms (next.js: 7ms, application-code: 83ms)
+ GET /reading/free 200 in 219ms (next.js: 11ms, application-code: 208ms)

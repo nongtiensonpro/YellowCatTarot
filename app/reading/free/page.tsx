@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { TarotCard as TarotCardType, tarotCards, getCardById } from '@/lib/cards-data';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { TarotCard as TarotCardType, getCardById } from '@/lib/cards-data';
 import { useEntropyCollector } from '@/hooks/useEntropyCollector';
 import {
   createNewDeck,
@@ -13,33 +12,73 @@ import {
   FaceDownPosition
 } from '@/lib/tarot-deck';
 import CardDeck from '@/components/CardDeck';
-import TarotCard from '@/components/TarotCard';
 import CardInspector from '@/components/CardInspector';
+import FreeTarotWorkspace2D, { FreeWorkspaceCard } from '@/components/FreeTarotWorkspace2D';
 import { motion, AnimatePresence } from 'framer-motion';
 
 type FlowStep = 'SETUP' | 'SHUFFLING' | 'PICKING' | 'RESULT';
 
-interface FreeDrawnCard {
-  card: TarotCardType;
-  isReversed: boolean;
-  pickOrder: number;
+type FreeDrawnCard = FreeWorkspaceCard;
+
+type ConversationSpeaker = 'reader' | 'client';
+
+interface ConversationMessage {
+  id: string;
+  speaker: ConversationSpeaker;
+  text: string;
+  relatedCardId?: string;
+  createdAt: string;
+}
+
+interface SavedWorkspaceCard extends Omit<FreeWorkspaceCard, 'card'> {
+  cardId: number;
+}
+
+interface SavedFreeSession {
+  currentRound: 1 | 2 | 3;
+  cardsToPickThisRound: number;
+  cards: SavedWorkspaceCard[];
+  journalNotes: string;
+  conversation: ConversationMessage[];
+}
+
+const FREE_SESSION_STORAGE_KEY = 'tarot_free_professional_session';
+
+function getInitialCardPlacement(round: 1 | 2 | 3, pickOrder: number, zIndex: number) {
+  const rowY = 82 + (round - 1) * 320;
+  const column = (pickOrder - 1) % 10;
+  const rowOffset = Math.floor((pickOrder - 1) / 10);
+
+  return {
+    x: 120 + column * 155 + rowOffset * 24,
+    y: rowY + rowOffset * 68,
+    rotation: ((pickOrder % 5) - 2) * 4,
+    zIndex,
+  };
 }
 
 export default function FreeReadingPage() {
-  const { startCollecting, stopCollecting, onMouseMove, onTouchMove } = useEntropyCollector();
+  const { startCollecting, stopCollecting } = useEntropyCollector();
+  const hasLoadedSession = useRef(false);
+  const idCounterRef = useRef(0);
 
   // Page States
   const [currentRound, setCurrentRound] = useState<1 | 2 | 3>(1);
   const [step, setStep] = useState<FlowStep>('SETUP');
   const [cardsToPickThisRound, setCardsToPickThisRound] = useState<number>(3);
 
-  // Toggle state for Journal (default is hidden!)
-  const [showJournal, setShowJournal] = useState<boolean>(false);
+  // Toggle state for professional session side panel
+  const [showJournal, setShowJournal] = useState<boolean>(true);
 
   // 3-Round Cards storage
   const [round1Cards, setRound1Cards] = useState<FreeDrawnCard[]>([]);
   const [round2Cards, setRound2Cards] = useState<FreeDrawnCard[]>([]);
   const [round3Cards, setRound3Cards] = useState<FreeDrawnCard[]>([]);
+  const allDrawnCards = useMemo(
+    () => [...round1Cards, ...round2Cards, ...round3Cards],
+    [round1Cards, round2Cards, round3Cards]
+  );
+  const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   // Picker states
   const [deckState, setDeckState] = useState<DeckState | null>(null);
@@ -48,19 +87,90 @@ export default function FreeReadingPage() {
 
   // Journal Notepad State (parchment)
   const [journalNotes, setJournalNotes] = useState<string>('');
+  const [conversation, setConversation] = useState<ConversationMessage[]>([]);
+  const [conversationInput, setConversationInput] = useState('');
+  const [conversationSpeaker, setConversationSpeaker] = useState<ConversationSpeaker>('reader');
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Inspector State
   const [selectedCard, setSelectedCard] = useState<TarotCardType | null>(null);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
-  // Load journal from sessionStorage on mount
+  // Load professional session from sessionStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('tarot_free_journal');
-      if (saved) setJournalNotes(saved);
+      const restoreTimer = window.setTimeout(() => {
+        const saved = sessionStorage.getItem(FREE_SESSION_STORAGE_KEY);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved) as SavedFreeSession;
+            const hydratedCards = parsed.cards
+              .map((savedCard) => {
+                const card = getCardById(savedCard.cardId);
+                if (!card) return null;
+                return {
+                  id: savedCard.id,
+                  card,
+                  isReversed: savedCard.isReversed,
+                  pickOrder: savedCard.pickOrder,
+                  round: savedCard.round,
+                  x: savedCard.x,
+                  y: savedCard.y,
+                  rotation: savedCard.rotation,
+                  zIndex: savedCard.zIndex,
+                  label: savedCard.label,
+                  note: savedCard.note,
+                  locked: savedCard.locked,
+                };
+              })
+              .filter(Boolean) as FreeDrawnCard[];
+
+            setRound1Cards(hydratedCards.filter((card) => card.round === 1));
+            setRound2Cards(hydratedCards.filter((card) => card.round === 2));
+            setRound3Cards(hydratedCards.filter((card) => card.round === 3));
+            setCurrentRound(parsed.currentRound || 1);
+            setCardsToPickThisRound(parsed.cardsToPickThisRound || 3);
+            setJournalNotes(parsed.journalNotes || '');
+            setConversation(parsed.conversation || []);
+            setStep(hydratedCards.length > 0 ? 'RESULT' : 'SETUP');
+            idCounterRef.current = hydratedCards.length + parsed.conversation.length;
+          } catch (err) {
+            console.error('Failed to restore free reading session', err);
+          }
+        } else {
+          const legacyJournal = sessionStorage.getItem('tarot_free_journal');
+          if (legacyJournal) setJournalNotes(legacyJournal);
+        }
+        hasLoadedSession.current = true;
+      }, 0);
+
+      return () => window.clearTimeout(restoreTimer);
     }
   }, []);
+
+  // Persist the professional workspace after initial hydration
+  useEffect(() => {
+    if (!hasLoadedSession.current || typeof window === 'undefined') return;
+
+    const cardsToSave: SavedWorkspaceCard[] = allDrawnCards.map((workspaceCard) => {
+      const { card, ...rest } = workspaceCard;
+      return {
+        ...rest,
+        cardId: card.id,
+      };
+    });
+
+    const payload: SavedFreeSession = {
+      currentRound,
+      cardsToPickThisRound,
+      cards: cardsToSave,
+      journalNotes,
+      conversation,
+    };
+
+    sessionStorage.setItem(FREE_SESSION_STORAGE_KEY, JSON.stringify(payload));
+    sessionStorage.setItem('tarot_free_journal', journalNotes);
+  }, [allDrawnCards, cardsToPickThisRound, conversation, currentRound, journalNotes]);
 
   // Save journal to sessionStorage on edit
   const handleJournalChange = (text: string) => {
@@ -99,12 +209,20 @@ export default function FreeReadingPage() {
 
       const newPickCount = currentPickCount + 1;
       setCurrentPickCount(newPickCount);
+      const placement = getInitialCardPlacement(currentRound, newPickCount, allDrawnCards.length + 1);
 
       const drawnCard: FreeDrawnCard = {
+        id: `free-${currentRound}-${drawn.cardId}-${newPickCount}-${++idCounterRef.current}`,
         card: cardType,
         isReversed: drawn.isReversed,
-        pickOrder: newPickCount
+        pickOrder: newPickCount,
+        round: currentRound,
+        label: `Vòng ${currentRound} · Lá ${newPickCount}`,
+        note: '',
+        locked: false,
+        ...placement,
       };
+      setActiveCardId(drawnCard.id);
 
       // Store in current round array
       if (currentRound === 1) {
@@ -147,6 +265,50 @@ export default function FreeReadingPage() {
     setIsInspectorOpen(true);
   };
 
+  const handleUpdateWorkspaceCard = (cardId: string, updates: Partial<FreeWorkspaceCard>) => {
+    const update = (cards: FreeDrawnCard[]) =>
+      cards.map((workspaceCard) =>
+        workspaceCard.id === cardId ? { ...workspaceCard, ...updates } : workspaceCard
+      );
+
+    setRound1Cards(update);
+    setRound2Cards(update);
+    setRound3Cards(update);
+  };
+
+  const handleAutoArrangeWorkspace = () => {
+    const arrangeRound = (cards: FreeDrawnCard[]) =>
+      cards.map((workspaceCard, index) => ({
+        ...workspaceCard,
+        ...getInitialCardPlacement(workspaceCard.round, index + 1, index + 1),
+        pickOrder: index + 1,
+      }));
+
+    setRound1Cards(arrangeRound);
+    setRound2Cards(arrangeRound);
+    setRound3Cards(arrangeRound);
+  };
+
+  const handleAddConversationMessage = (event: React.FormEvent) => {
+    event.preventDefault();
+    const text = conversationInput.trim();
+    if (!text) return;
+
+    const newMessage: ConversationMessage = {
+      id: `msg-${++idCounterRef.current}`,
+      speaker: conversationSpeaker,
+      text,
+      relatedCardId: activeCardId || undefined,
+      createdAt: new Date().toLocaleTimeString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    };
+
+    setConversation((prev) => [...prev, newMessage]);
+    setConversationInput('');
+  };
+
   // CLIPBOARD EXPORT
   const handleCopyResults = () => {
     const dateText = new Date().toLocaleDateString('vi-VN', {
@@ -162,19 +324,32 @@ export default function FreeReadingPage() {
       if (list.length === 0) return '';
       let text = `✨ ${title} (${list.length} lá bài):\n`;
       list.forEach((c) => {
-        text += `  - Lá ${c.card.nameVi} (${c.card.nameEn}) • ${c.isReversed ? 'Ngược ↩' : 'Xuôi ✦'}\n`;
+        text += `  - ${c.label || `Lá ${c.pickOrder}`}: ${c.card.nameVi} (${c.card.nameEn}) • ${c.isReversed ? 'Ngược ↩' : 'Xuôi ✦'} • X:${Math.round(c.x)} Y:${Math.round(c.y)} R:${Math.round(c.rotation)}°\n`;
+        if (c.note?.trim()) {
+          text += `    Ghi chú: ${c.note.trim()}\n`;
+        }
       });
       return text + '\n';
     };
 
-    let clipboardText = `🎨 KHÔNG GIAN TỰ TRẢI BÀI TAROT — TỰ LUẬN GIẢI\n`;
+    let clipboardText = `🎨 KHÔNG GIAN TƯ VẤN TAROT 2D — PHIÊN CHUYÊN NGHIỆP\n`;
     clipboardText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     clipboardText += `📅 Thời gian trải bài: ${dateText}\n\n`;
     clipboardText += formatCardsList('VÒNG 1', round1Cards);
     clipboardText += formatCardsList('VÒNG 2', round2Cards);
     clipboardText += formatCardsList('VÒNG 3', round3Cards);
-    clipboardText += `📝 NHẬT KÝ TỰ LUẬN GIẢI CỦA QUÝ NHÂN:\n`;
+    clipboardText += `📝 NHẬT KÝ PHÂN TÍCH CỦA READER:\n`;
     clipboardText += `${journalNotes.trim() || '(Không ghi chú)'}\n`;
+    clipboardText += `\n💬 TRAO ĐỔI TRONG PHIÊN:\n`;
+    clipboardText += conversation.length === 0
+      ? '(Chưa có trao đổi được ghi lại)\n'
+      : conversation
+          .map((message) => {
+            const relatedCard = allDrawnCards.find((card) => card.id === message.relatedCardId);
+            const cardText = relatedCard ? ` [${relatedCard.card.nameVi}]` : '';
+            return `  - ${message.createdAt} · ${message.speaker === 'reader' ? 'Reader' : 'Khách hàng'}${cardText}: ${message.text}`;
+          })
+          .join('\n') + '\n';
     clipboardText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
 
     navigator.clipboard.writeText(clipboardText).then(() => {
@@ -190,27 +365,33 @@ export default function FreeReadingPage() {
       setRound1Cards([]);
       setRound2Cards([]);
       setRound3Cards([]);
+      setActiveCardId(null);
+      setConversation([]);
+      setConversationInput('');
       setJournalNotes('');
       sessionStorage.removeItem('tarot_free_journal');
+      sessionStorage.removeItem(FREE_SESSION_STORAGE_KEY);
     }
   };
 
+  const activeWorkspaceCard = allDrawnCards.find((card) => card.id === activeCardId) || null;
+
   return (
     <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-6 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
-      <div className="w-full max-w-6xl flex flex-col gap-5 items-stretch">
+      <div className="w-full max-w-7xl flex flex-col gap-5 items-stretch">
         
         {/* Header (Minimal, No Golden Cat reference) */}
         <div className="text-center border-b border-white/5 pb-4 flex flex-col items-center gap-1.5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
             <h1 className="font-cinzel text-xl md:text-2xl font-extrabold text-gold-primary tracking-wider drop-shadow-[0_0_8px_var(--color-gold-glow)]">
-              Không Gian Tự Trải Bài
+              Không Gian Tư Vấn Tarot 2D
             </h1>
             <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-white/5 border border-white/10 text-text-secondary uppercase select-none">
-              Tự Luận Giải ✏️
+              Pro Workspace
             </span>
           </div>
           <p className="font-lora text-[11px] md:text-xs text-text-secondary italic">
-            Nơi tập trung tâm trí tối đa — Trực tiếp kết nối các lá bài qua 3 vòng tự do, tự ghi nhật ký đúc kết.
+            Bàn 2D tự do cho reader chuyên nghiệp: kéo thả, xoay, khóa, ghi chú từng lá và lưu lại trao đổi với khách hàng.
           </p>
         </div>
 
@@ -262,7 +443,7 @@ export default function FreeReadingPage() {
                   : 'bg-white/5 border-gold-primary/25 hover:border-gold-light text-gold-light'
               }`}
             >
-              <span>{showJournal ? '🙈 Ẩn Nhật Ký' : '📝 Mở Nhật Ký'}</span>
+              <span>{showJournal ? 'Ẩn Phiên Đọc' : 'Mở Phiên Đọc'}</span>
             </button>
           </div>
         </div>
@@ -271,7 +452,7 @@ export default function FreeReadingPage() {
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mt-1.5 relative">
           
           {/* LEFT: Free Tarot board lanes & Picker Area (Flexible width span) */}
-          <div className={`flex flex-col gap-5 min-h-[500px] transition-all duration-500 ${showJournal ? 'lg:col-span-7' : 'lg:col-span-12'}`}>
+          <div className={`flex flex-col gap-5 min-h-[500px] transition-all duration-500 ${showJournal ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
             
             {/* PICKER OR SETUP MODULE */}
             <AnimatePresence mode="wait">
@@ -355,132 +536,18 @@ export default function FreeReadingPage() {
               )}
             </AnimatePresence>
 
-            {/* LANES DISPLAY (Free Tarot Board Container) */}
-            <div className="flex-1 w-full bg-white/[0.01] border border-white/[0.05] rounded-3xl p-4 md:p-6 shadow-2xl flex flex-col gap-6 overflow-y-auto max-h-[75vh] scrollbar-thin">
-              
-              {/* Lane: Round 1 */}
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center justify-between pb-1.5 border-b border-white/5 select-none">
-                  <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-gold-primary/10 border border-gold-primary/20 text-gold-light uppercase">
-                    Vòng 1 {round1Cards.length > 0 && `· ${round1Cards.length} Lá`}
-                  </span>
-                  {round1Cards.length === 0 && (
-                    <span className="text-[9px] text-text-secondary/35 font-lora italic">Chưa trải bài...</span>
-                  )}
-                </div>
-                {round1Cards.length > 0 ? (
-                  <div className="flex flex-wrap gap-4 items-center justify-center py-2 w-full">
-                    {round1Cards.map((c) => (
-                      <div key={`r1-${c.card.id}-${c.pickOrder}`} className="flex flex-col items-center gap-1.5 group select-none">
-                        <TarotCard
-                          card={c.card}
-                          isFlipped={true}
-                          isReversed={c.isReversed}
-                          size="sm"
-                          onClick={() => handleCardInspect(c.card)}
-                          className="shadow-[0_4px_16px_rgba(0,0,0,0.5)] group-hover:-translate-y-1 group-hover:shadow-[0_0_12px_rgba(244,162,97,0.2)] transition-all duration-300 rounded-lg overflow-hidden border border-white/5"
-                        />
-                        <span className="text-[9px] font-lora text-white font-medium truncate max-w-[95px] text-center drop-shadow">
-                          {c.card.nameVi} {c.isReversed ? '↩' : '✦'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-12 rounded-xl bg-white/[0.01] border border-dashed border-white/5 flex items-center justify-center text-[10px] text-text-secondary/20 italic select-none">
-                    Bài Vòng 1 sẽ hiển thị ở đây
-                  </div>
-                )}
-              </div>
-
-              {/* Lane: Round 2 */}
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center justify-between pb-1.5 border-b border-white/5 select-none">
-                  <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-[#2a9d8f]/10 border border-[#2a9d8f]/30 text-[#48cae4] uppercase">
-                    Vòng 2 {round2Cards.length > 0 && `· ${round2Cards.length} Lá`}
-                  </span>
-                  {round2Cards.length === 0 && (
-                    <span className="text-[9px] text-text-secondary/35 font-lora italic">Chưa trải bài...</span>
-                  )}
-                </div>
-                {round2Cards.length > 0 ? (
-                  <div className="flex flex-wrap gap-4 items-center justify-center py-2 w-full">
-                    {round2Cards.map((c) => (
-                      <div key={`r2-${c.card.id}-${c.pickOrder}`} className="flex flex-col items-center gap-1.5 group select-none">
-                        <TarotCard
-                          card={c.card}
-                          isFlipped={true}
-                          isReversed={c.isReversed}
-                          size="sm"
-                          onClick={() => handleCardInspect(c.card)}
-                          className="shadow-[0_4px_16px_rgba(0,0,0,0.5)] group-hover:-translate-y-1 group-hover:shadow-[0_0_12px_rgba(244,162,97,0.2)] transition-all duration-300 rounded-lg overflow-hidden border border-white/5"
-                        />
-                        <span className="text-[9px] font-lora text-white font-medium truncate max-w-[95px] text-center drop-shadow">
-                          {c.card.nameVi} {c.isReversed ? '↩' : '✦'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-12 rounded-xl bg-white/[0.01] border border-dashed border-white/5 flex items-center justify-center text-[10px] text-text-secondary/20 italic select-none">
-                    Bài Vòng 2 sẽ hiển thị ở đây
-                  </div>
-                )}
-              </div>
-
-              {/* Lane: Round 3 */}
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center justify-between pb-1.5 border-b border-white/5 select-none">
-                  <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-[#e76f51]/10 border border-[#e76f51]/30 text-[#f4a261] uppercase">
-                    Vòng 3 {round3Cards.length > 0 && `· ${round3Cards.length} Lá`}
-                  </span>
-                  {round3Cards.length === 0 && (
-                    <span className="text-[9px] text-text-secondary/35 font-lora italic">Chưa trải bài...</span>
-                  )}
-                </div>
-                {round3Cards.length > 0 ? (
-                  <div className="flex flex-wrap gap-4 items-center justify-center py-2 w-full">
-                    {round3Cards.map((c) => (
-                      <div key={`r3-${c.card.id}-${c.pickOrder}`} className="flex flex-col items-center gap-1.5 group select-none">
-                        <TarotCard
-                          card={c.card}
-                          isFlipped={true}
-                          isReversed={c.isReversed}
-                          size="sm"
-                          onClick={() => handleCardInspect(c.card)}
-                          className="shadow-[0_4px_16px_rgba(0,0,0,0.5)] group-hover:-translate-y-1 group-hover:shadow-[0_0_12px_rgba(244,162,97,0.2)] transition-all duration-300 rounded-lg overflow-hidden border border-white/5"
-                        />
-                        <span className="text-[9px] font-lora text-white font-medium truncate max-w-[95px] text-center drop-shadow">
-                          {c.card.nameVi} {c.isReversed ? '↩' : '✦'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="h-12 rounded-xl bg-white/[0.01] border border-dashed border-white/5 flex items-center justify-center text-[10px] text-text-secondary/20 italic select-none">
-                    Bài Vòng 3 sẽ hiển thị ở đây
-                  </div>
-                )}
-              </div>
-
-              {/* Blank initial board placeholder */}
-              {round1Cards.length === 0 && round2Cards.length === 0 && round3Cards.length === 0 && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 gap-3 pointer-events-none select-none">
-                  <div className="text-3xl animate-pulse">🃏</div>
-                  <h4 className="font-cinzel text-xs font-bold text-gold-light uppercase tracking-wider mt-1">
-                    Bàn Trải Bài Tự Do Trống
-                  </h4>
-                  <p className="font-lora text-[11px] text-text-secondary/50 italic max-w-xs leading-relaxed">
-                    Thiết lập quân số bài và bắt đầu nhặt bài để phơi bày dòng năng lượng 3 vòng độc lập của quý nhân.
-                  </p>
-                </div>
-              )}
-
-            </div>
+            <FreeTarotWorkspace2D
+              cards={allDrawnCards}
+              activeCardId={activeCardId}
+              onSelectCard={setActiveCardId}
+              onUpdateCard={handleUpdateWorkspaceCard}
+              onInspectCard={handleCardInspect}
+              onAutoArrange={handleAutoArrangeWorkspace}
+            />
 
           </div>
 
-          {/* RIGHT: Tarot parchment self-interpretation journal notepad (5/12 cols) */}
+          {/* RIGHT: Professional session notes and conversation panel */}
           <AnimatePresence>
             {showJournal && (
               <motion.div
@@ -488,34 +555,121 @@ export default function FreeReadingPage() {
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 50, scale: 0.95 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-                className="lg:col-span-5 flex flex-col gap-4"
+                className="lg:col-span-4 flex flex-col gap-4"
               >
-                {/* Notepad parchment box */}
-                <div className="flex-1 flex flex-col bg-[#16120e] border border-[#e76f51]/15 rounded-3xl p-4 md:p-5 shadow-2xl relative overflow-hidden backdrop-blur-md min-h-[480px]">
-                  {/* Parchment background texture pattern */}
-                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-radial from-transparent to-[#f4a261]/20 z-0" />
-                  
-                  {/* Notepad header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-[#e76f51]/20 flex-shrink-0 z-10 select-none">
+                <div className="flex-1 flex flex-col gap-4 bg-bg-surface/28 border border-white/[0.06] rounded-3xl p-4 md:p-5 shadow-2xl relative overflow-hidden backdrop-blur-md min-h-[640px]">
+                  <div className="absolute inset-0 opacity-[0.035] pointer-events-none bg-radial from-transparent to-[#f4a261]/20 z-0" />
+
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-shrink-0 z-10 select-none">
                     <div className="flex items-center gap-2">
-                      <span className="text-base">📝</span>
                       <div>
                         <h4 className="font-cinzel text-xs font-bold text-gold-light tracking-widest uppercase">
-                          Nhật Ký Tự Luận Giải
+                          Phiên Trao Đổi Tarot
                         </h4>
-                        <p className="text-[9px] text-[#c9b89a]/55 font-lora italic leading-none mt-1">
-                          Nơi ghi chú insights trực giác
+                        <p className="text-[9px] text-text-secondary/55 font-lora italic leading-none mt-1">
+                          Ghi hội thoại, insight và kết luận với khách hàng
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Notepad textarea content */}
-                  <div className="flex-1 py-4 flex flex-col relative z-10">
+                  <div className="z-10 flex flex-col gap-2 min-h-[250px]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-text-secondary uppercase tracking-wider font-sans font-bold">
+                        Trao đổi tự do
+                      </span>
+                      {activeWorkspaceCard && (
+                        <span className="max-w-[150px] truncate text-[9px] text-gold-light/75 font-lora italic">
+                          Gắn với: {activeWorkspaceCard.card.nameVi}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="h-56 overflow-y-auto rounded-2xl border border-white/[0.08] bg-black/20 p-3 flex flex-col gap-2 scrollbar-thin">
+                      {conversation.length > 0 ? (
+                        conversation.map((message) => {
+                          const relatedCard = allDrawnCards.find((card) => card.id === message.relatedCardId);
+                          const isReader = message.speaker === 'reader';
+                          return (
+                            <div
+                              key={message.id}
+                              className={`max-w-[92%] rounded-2xl px-3 py-2 border text-xs leading-relaxed ${
+                                isReader
+                                  ? 'self-start bg-gold-primary/10 border-gold-primary/18 text-text-primary rounded-tl-sm'
+                                  : 'self-end bg-white/[0.055] border-white/10 text-text-primary rounded-tr-sm'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2 text-[8px] font-sans font-bold uppercase tracking-wider text-text-secondary/60 mb-1">
+                                <span>{isReader ? 'Reader' : 'Khách hàng'}</span>
+                                <span>{message.createdAt}</span>
+                              </div>
+                              <p className="font-lora whitespace-pre-line">{message.text}</p>
+                              {relatedCard && (
+                                <span className="mt-1 inline-block text-[8px] text-gold-light/70 font-sans uppercase tracking-wider">
+                                  {relatedCard.card.nameVi}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-center px-4">
+                          <p className="text-xs text-text-secondary/45 font-lora italic leading-relaxed">
+                            Ghi lại câu hỏi, phản hồi, giả thuyết và quyết định trong phiên. Nếu đang chọn một lá, tin nhắn sẽ được gắn với lá đó.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <form onSubmit={handleAddConversationMessage} className="flex flex-col gap-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setConversationSpeaker('reader')}
+                          className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            conversationSpeaker === 'reader'
+                              ? 'bg-gold-primary/18 border-gold-primary text-gold-light'
+                              : 'bg-white/5 border-white/10 text-text-secondary hover:border-gold-primary/30'
+                          }`}
+                        >
+                          Reader
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConversationSpeaker('client')}
+                          className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            conversationSpeaker === 'client'
+                              ? 'bg-[#2a9d8f]/18 border-[#2a9d8f] text-[#48cae4]'
+                              : 'bg-white/5 border-white/10 text-text-secondary hover:border-[#2a9d8f]/35'
+                          }`}
+                        >
+                          Khách hàng
+                        </button>
+                      </div>
+                      <textarea
+                        value={conversationInput}
+                        onChange={(event) => setConversationInput(event.target.value)}
+                        placeholder="Nhập câu hỏi, phản hồi hoặc kết luận ngắn trong phiên..."
+                        className="h-20 resize-none rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs leading-relaxed text-text-primary placeholder:text-text-secondary/35 scrollbar-thin"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!conversationInput.trim()}
+                        className="w-full py-2.5 rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep font-sans font-bold text-xs uppercase tracking-widest cursor-pointer transition-all disabled:opacity-40 disabled:pointer-events-none"
+                      >
+                        Ghi Vào Phiên
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className="flex-1 min-h-[260px] py-1 flex flex-col relative z-10">
+                    <label className="text-[10px] text-text-secondary uppercase tracking-wider font-sans font-bold mb-2">
+                      Nhật ký tổng hợp của reader
+                    </label>
                     <textarea
                       value={journalNotes}
                       onChange={(e) => handleJournalChange(e.target.value)}
-                      placeholder="Quý nhân ơi, sau khi rút bài hoặc nhặt các lá bài bổ trợ ở các vòng, hãy tập trung lắng nghe trực giác mách bảo gì. Hãy tự gõ lời giải nghĩa, cảm xúc, suy ngẫm hay lời đúc kết của riêng mình vào cuốn tập sớ này nhé... ✏️"
+                      placeholder="Tóm tắt bối cảnh, các pattern chính, lời khuyên, hành động kế tiếp và điểm cần theo dõi sau phiên..."
                       className="w-full flex-1 bg-transparent border-none focus:outline-none resize-none font-lora text-xs md:text-sm text-amber-100 placeholder:text-amber-100/25 leading-relaxed overflow-y-auto scrollbar-thin"
                       style={{
                         backgroundImage: 'linear-gradient(rgba(231,111,81,0.06) 1px, transparent 1px)',
@@ -525,10 +679,7 @@ export default function FreeReadingPage() {
                     />
                   </div>
 
-                  {/* Action area inside notepad */}
                   <div className="border-t border-[#e76f51]/15 pt-3 flex-shrink-0 flex items-center justify-between z-10 select-none">
-                    
-                    {/* Dynamic Next Round Button or Finish details */}
                     {step === 'RESULT' && currentRound < 3 ? (
                       <button
                         onClick={handleNextRound}
@@ -545,7 +696,6 @@ export default function FreeReadingPage() {
                       </div>
                     )}
 
-                    {/* Export/Copy Results Button in notepad */}
                     <button
                       onClick={handleCopyResults}
                       disabled={round1Cards.length === 0}
