@@ -22,6 +22,7 @@ export interface FreeWorkspaceCard {
 interface FreeTarotWorkspace2DProps {
   cards: FreeWorkspaceCard[];
   activeCardId: string | null;
+  showCardControlPanel: boolean;
   onSelectCard: (cardId: string | null) => void;
   onUpdateCard: (cardId: string, updates: Partial<FreeWorkspaceCard>) => void;
   onInspectCard: (card: TarotCardType) => void;
@@ -60,6 +61,7 @@ function clamp(value: number, min: number, max: number) {
 export default function FreeTarotWorkspace2D({
   cards,
   activeCardId,
+  showCardControlPanel,
   onSelectCard,
   onUpdateCard,
   onInspectCard,
@@ -250,6 +252,14 @@ export default function FreeTarotWorkspace2D({
           >
             Đảo Xuôi/Ngược
           </button>
+          {activeCard && (
+            <button
+              onClick={() => onInspectCard(activeCard.card)}
+              className="px-3 py-2 rounded-xl bg-gold-primary/18 border border-gold-primary/45 hover:bg-gold-primary hover:text-bg-deep text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all shadow-[0_0_10px_rgba(244,162,97,0.12)]"
+            >
+              Xem Lá Đang Chọn
+            </button>
+          )}
           <button
             onClick={() => rotateActive(-15)}
             disabled={!activeCard || activeCard.locked}
@@ -287,7 +297,7 @@ export default function FreeTarotWorkspace2D({
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className="xl:col-span-9 min-h-[620px]">
+        <div className={`${showCardControlPanel ? 'xl:col-span-9' : 'xl:col-span-12'} min-h-[620px]`}>
           <div
             ref={scrollRef}
             className={`relative h-[68vh] min-h-[620px] overflow-auto rounded-2xl border border-white/[0.06] bg-[#070711] shadow-2xl scrollbar-thin ${
@@ -340,10 +350,10 @@ export default function FreeTarotWorkspace2D({
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-3 pointer-events-none">
                     <div className="text-4xl opacity-70">🃏</div>
                     <h4 className="font-cinzel text-sm font-bold text-gold-light uppercase tracking-wider">
-                      Bàn tư vấn 2D đang trống
+                      Không gian trải nghiệm đang trống
                     </h4>
                     <p className="max-w-sm text-xs text-text-secondary/55 font-lora italic leading-relaxed">
-                      Sau khi rút bài, mỗi lá sẽ xuất hiện trên mặt bàn này để bạn kéo thả, xoay, khóa vị trí và ghi chú trực tiếp cho phiên đọc.
+                      Sau khi rút bài, mỗi lá sẽ xuất hiện trên mặt bàn này để bạn tự do sắp đặt, xoay, kết nối và ghi lại cảm nhận theo cách riêng.
                     </p>
                   </div>
                 )}
@@ -411,73 +421,75 @@ export default function FreeTarotWorkspace2D({
           </div>
         </div>
 
-        <aside className="xl:col-span-3 min-h-[620px] rounded-2xl border border-white/[0.06] bg-bg-surface/25 p-4 flex flex-col gap-4 shadow-2xl">
-          <div className="border-b border-white/10 pb-3">
-            <h3 className="font-cinzel text-xs font-bold text-gold-light uppercase tracking-wider">
-              Bảng Điều Khiển Lá
-            </h3>
-            <p className="text-[10px] text-text-secondary/55 font-lora italic mt-1">
-              Chọn một lá trên bàn để ghi chú, đổi nhãn, xoay hoặc mở chi tiết ý nghĩa.
-            </p>
-          </div>
-
-          {activeCard ? (
-            <div className="flex flex-col gap-3 min-h-0">
-              <div className="rounded-xl bg-black/20 border border-white/5 p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h4 className="font-cinzel text-sm text-text-primary font-bold truncate">
-                      {activeCard.card.nameVi}
-                    </h4>
-                    <p className="text-[10px] text-text-secondary/60 font-lora italic truncate">
-                      {activeCard.card.nameEn} · {activeCard.isReversed ? 'Chiều ngược' : 'Chiều xuôi'}
-                    </p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded border text-[8px] font-sans font-bold uppercase tracking-wider ${roundStyles[activeCard.round].badge}`}>
-                    V{activeCard.round}
-                  </span>
-                </div>
-              </div>
-
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-text-secondary">
-                  Nhãn vị trí
-                </span>
-                <input
-                  value={activeCard.label || ''}
-                  onChange={(event) => updateActiveLabel(event.target.value)}
-                  placeholder="Ví dụ: Gốc vấn đề, Khách hàng, Hướng đi..."
-                  className="w-full rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs text-text-primary placeholder:text-text-secondary/35"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 min-h-0">
-                <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-text-secondary">
-                  Ghi chú riêng cho lá này
-                </span>
-                <textarea
-                  value={activeCard.note || ''}
-                  onChange={(event) => updateActiveNote(event.target.value)}
-                  placeholder="Ghi nhận trực giác, phản ứng của khách hàng, liên kết với câu hỏi..."
-                  className="min-h-[150px] resize-none rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs leading-relaxed text-text-primary placeholder:text-text-secondary/35 scrollbar-thin"
-                />
-              </label>
-
-              <button
-                onClick={() => onInspectCard(activeCard.card)}
-                className="w-full py-2.5 rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep text-xs font-sans font-bold uppercase tracking-widest cursor-pointer transition-all"
-              >
-                Mở Thư Viện Ý Nghĩa
-              </button>
-            </div>
-          ) : (
-            <div className="flex-1 rounded-xl border border-dashed border-white/10 bg-white/[0.015] flex items-center justify-center p-5 text-center">
-              <p className="text-xs text-text-secondary/45 font-lora italic leading-relaxed">
-                Chưa chọn lá nào. Chạm hoặc nhấp vào một lá trên bàn để mở bảng điều khiển.
+        {showCardControlPanel && (
+          <aside className="xl:col-span-3 min-h-[620px] rounded-2xl border border-white/[0.06] bg-bg-surface/25 p-4 flex flex-col gap-4 shadow-2xl">
+            <div className="border-b border-white/10 pb-3">
+              <h3 className="font-cinzel text-xs font-bold text-gold-light uppercase tracking-wider">
+                Bảng Điều Khiển Lá
+              </h3>
+              <p className="text-[10px] text-text-secondary/55 font-lora italic mt-1">
+                Chọn một lá trên bàn để ghi chú, đổi nhãn, xoay hoặc mở chi tiết ý nghĩa.
               </p>
             </div>
-          )}
-        </aside>
+
+            {activeCard ? (
+              <div className="flex flex-col gap-3 min-h-0">
+                <div className="rounded-xl bg-black/20 border border-white/5 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h4 className="font-cinzel text-sm text-text-primary font-bold truncate">
+                        {activeCard.card.nameVi}
+                      </h4>
+                      <p className="text-[10px] text-text-secondary/60 font-lora italic truncate">
+                        {activeCard.card.nameEn} · {activeCard.isReversed ? 'Chiều ngược' : 'Chiều xuôi'}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded border text-[8px] font-sans font-bold uppercase tracking-wider ${roundStyles[activeCard.round].badge}`}>
+                      V{activeCard.round}
+                    </span>
+                  </div>
+                </div>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-text-secondary">
+                    Nhãn vị trí
+                  </span>
+                  <input
+                    value={activeCard.label || ''}
+                    onChange={(event) => updateActiveLabel(event.target.value)}
+                    placeholder="Ví dụ: Gốc vấn đề, Hiện tại, Hướng đi..."
+                    className="w-full rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs text-text-primary placeholder:text-text-secondary/35"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-1.5 min-h-0">
+                  <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-text-secondary">
+                    Ghi chú riêng cho lá này
+                  </span>
+                  <textarea
+                    value={activeCard.note || ''}
+                    onChange={(event) => updateActiveNote(event.target.value)}
+                    placeholder="Ghi nhận trực giác, cảm nhận nổi bật, liên kết với câu hỏi hoặc vị trí trên bàn..."
+                    className="min-h-[150px] resize-none rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs leading-relaxed text-text-primary placeholder:text-text-secondary/35 scrollbar-thin"
+                  />
+                </label>
+
+                <button
+                  onClick={() => onInspectCard(activeCard.card)}
+                  className="w-full py-2.5 rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep text-xs font-sans font-bold uppercase tracking-widest cursor-pointer transition-all"
+                >
+                  Mở Thư Viện Ý Nghĩa
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 rounded-xl border border-dashed border-white/10 bg-white/[0.015] flex items-center justify-center p-5 text-center">
+                <p className="text-xs text-text-secondary/45 font-lora italic leading-relaxed">
+                  Chưa chọn lá nào. Chạm hoặc nhấp vào một lá trên bàn để mở bảng điều khiển.
+                </p>
+              </div>
+            )}
+          </aside>
+        )}
       </div>
     </div>
   );

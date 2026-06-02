@@ -9,9 +9,10 @@ interface CardInspectorProps {
   card: TarotCard;
   isOpen: boolean;
   onClose: () => void;
+  singleCardOnly?: boolean;
 }
 
-export default function CardInspector({ card, isOpen, onClose }: CardInspectorProps) {
+export default function CardInspector({ card, isOpen, onClose, singleCardOnly = false }: CardInspectorProps) {
   const [currentCard, setCurrentCard] = useState<TarotCard>(card);
   const [zoomScale, setZoomScale] = useState(1);
   const [showInfo, setShowInfo] = useState(false);
@@ -43,19 +44,20 @@ export default function CardInspector({ card, isOpen, onClose }: CardInspectorPr
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
-      } else if (e.key === 'ArrowLeft') {
+      } else if (!singleCardOnly && e.key === 'ArrowLeft') {
         handlePrev();
-      } else if (e.key === 'ArrowRight') {
+      } else if (!singleCardOnly && e.key === 'ArrowRight') {
         handleNext();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentCard]);
+  }, [isOpen, currentCard, singleCardOnly, onClose]);
 
   // Navigate to previous card
   const handlePrev = () => {
+    if (singleCardOnly) return;
     setZoomScale(1);
     const currentIndex = tarotCards.findIndex((c) => c.id === currentCard.id);
     const prevIndex = currentIndex > 0 ? currentIndex - 1 : tarotCards.length - 1;
@@ -64,6 +66,7 @@ export default function CardInspector({ card, isOpen, onClose }: CardInspectorPr
 
   // Navigate to next card
   const handleNext = () => {
+    if (singleCardOnly) return;
     setZoomScale(1);
     const currentIndex = tarotCards.findIndex((c) => c.id === currentCard.id);
     const nextIndex = currentIndex < tarotCards.length - 1 ? currentIndex + 1 : 0;
@@ -107,6 +110,7 @@ export default function CardInspector({ card, isOpen, onClose }: CardInspectorPr
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    if (singleCardOnly) return;
     if (zoomScale > 1) return; // Prevent swiping while zoomed in
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchEndX - touchStartX.current;
@@ -219,14 +223,15 @@ export default function CardInspector({ card, isOpen, onClose }: CardInspectorPr
           {/* MAIN CONTAINER */}
           <div className="flex-1 w-full flex flex-col md:flex-row items-center justify-center p-4 md:p-6 overflow-hidden relative">
             
-            {/* LEFT NAVIGATION ARROW (Translucent Floating) */}
-            <button
-              onClick={handlePrev}
-              className="absolute left-2 md:left-4 z-20 p-2.5 md:p-3.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/80 hover:border-gold-primary/40 text-white font-bold cursor-pointer transition-all shadow-xl active:scale-95"
-              title="Lá bài trước"
-            >
-              ◀
-            </button>
+            {!singleCardOnly && (
+              <button
+                onClick={handlePrev}
+                className="absolute left-2 md:left-4 z-20 p-2.5 md:p-3.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/80 hover:border-gold-primary/40 text-white font-bold cursor-pointer transition-all shadow-xl active:scale-95"
+                title="Lá bài trước"
+              >
+                ◀
+              </button>
+            )}
 
             {/* ART WORK VIEWPORT */}
             <div
@@ -259,14 +264,15 @@ export default function CardInspector({ card, isOpen, onClose }: CardInspectorPr
               </motion.div>
             </div>
 
-            {/* RIGHT NAVIGATION ARROW (Translucent Floating) */}
-            <button
-              onClick={handleNext}
-              className="absolute right-2 md:right-4 z-20 p-2.5 md:p-3.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/80 hover:border-gold-primary/40 text-white font-bold cursor-pointer transition-all shadow-xl active:scale-95"
-              title="Lá bài kế tiếp"
-            >
-              ▶
-            </button>
+            {!singleCardOnly && (
+              <button
+                onClick={handleNext}
+                className="absolute right-2 md:right-4 z-20 p-2.5 md:p-3.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/80 hover:border-gold-primary/40 text-white font-bold cursor-pointer transition-all shadow-xl active:scale-95"
+                title="Lá bài kế tiếp"
+              >
+                ▶
+              </button>
+            )}
 
             {/* SIDE PANEL: INFO OVERLAY (Optimized for both Desktop & Mobile Drawers) */}
             <AnimatePresence>
@@ -330,7 +336,9 @@ export default function CardInspector({ card, isOpen, onClose }: CardInspectorPr
 
                   {/* Quick Usage Tip */}
                   <div className="mt-auto border-t border-white/5 pt-2 text-4xs text-text-secondary/40 font-lora italic text-center hidden md:block">
-                    Cuộn chuột hoặc nhấp đúp để phóng to. Nhấp kéo để di chuyển. Vuốt màn hình để chuyển bài.
+                    {singleCardOnly
+                      ? 'Cuộn chuột hoặc nhấp đúp để phóng to. Khi đang phóng to, nhấp kéo để di chuyển ảnh.'
+                      : 'Cuộn chuột hoặc nhấp đúp để phóng to. Nhấp kéo để di chuyển. Vuốt màn hình để chuyển bài.'}
                   </div>
                 </motion.div>
               )}

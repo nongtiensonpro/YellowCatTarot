@@ -20,7 +20,7 @@ type FlowStep = 'SETUP' | 'SHUFFLING' | 'PICKING' | 'RESULT';
 
 type FreeDrawnCard = FreeWorkspaceCard;
 
-type ConversationSpeaker = 'reader' | 'client';
+type ConversationSpeaker = 'guide' | 'seeker';
 
 interface ConversationMessage {
   id: string;
@@ -42,7 +42,7 @@ interface SavedFreeSession {
   conversation: ConversationMessage[];
 }
 
-const FREE_SESSION_STORAGE_KEY = 'tarot_free_professional_session';
+const FREE_SESSION_STORAGE_KEY = 'tarot_free_unlimited_session';
 
 function getInitialCardPlacement(round: 1 | 2 | 3, pickOrder: number, zIndex: number) {
   const rowY = 82 + (round - 1) * 320;
@@ -67,8 +67,9 @@ export default function FreeReadingPage() {
   const [step, setStep] = useState<FlowStep>('SETUP');
   const [cardsToPickThisRound, setCardsToPickThisRound] = useState<number>(3);
 
-  // Toggle state for professional session side panel
-  const [showJournal, setShowJournal] = useState<boolean>(true);
+  // Toggle state for session side panel
+  const [showJournal, setShowJournal] = useState<boolean>(false);
+  const [showCardControlPanel, setShowCardControlPanel] = useState<boolean>(false);
 
   // 3-Round Cards storage
   const [round1Cards, setRound1Cards] = useState<FreeDrawnCard[]>([]);
@@ -89,14 +90,14 @@ export default function FreeReadingPage() {
   const [journalNotes, setJournalNotes] = useState<string>('');
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
   const [conversationInput, setConversationInput] = useState('');
-  const [conversationSpeaker, setConversationSpeaker] = useState<ConversationSpeaker>('reader');
+  const [conversationSpeaker, setConversationSpeaker] = useState<ConversationSpeaker>('guide');
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Inspector State
   const [selectedCard, setSelectedCard] = useState<TarotCardType | null>(null);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
-  // Load professional session from sessionStorage on mount
+  // Load free session from sessionStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const restoreTimer = window.setTimeout(() => {
@@ -148,7 +149,7 @@ export default function FreeReadingPage() {
     }
   }, []);
 
-  // Persist the professional workspace after initial hydration
+  // Persist the free workspace after initial hydration
   useEffect(() => {
     if (!hasLoadedSession.current || typeof window === 'undefined') return;
 
@@ -332,13 +333,13 @@ export default function FreeReadingPage() {
       return text + '\n';
     };
 
-    let clipboardText = `🎨 KHÔNG GIAN TƯ VẤN TAROT 2D — PHIÊN CHUYÊN NGHIỆP\n`;
+    let clipboardText = `🎨 KHÔNG GIAN TRẢI NGHIỆM TAROT TỰ DO\n`;
     clipboardText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     clipboardText += `📅 Thời gian trải bài: ${dateText}\n\n`;
     clipboardText += formatCardsList('VÒNG 1', round1Cards);
     clipboardText += formatCardsList('VÒNG 2', round2Cards);
     clipboardText += formatCardsList('VÒNG 3', round3Cards);
-    clipboardText += `📝 NHẬT KÝ PHÂN TÍCH CỦA READER:\n`;
+    clipboardText += `📝 NHẬT KÝ TỔNG HỢP:\n`;
     clipboardText += `${journalNotes.trim() || '(Không ghi chú)'}\n`;
     clipboardText += `\n💬 TRAO ĐỔI TRONG PHIÊN:\n`;
     clipboardText += conversation.length === 0
@@ -347,7 +348,7 @@ export default function FreeReadingPage() {
           .map((message) => {
             const relatedCard = allDrawnCards.find((card) => card.id === message.relatedCardId);
             const cardText = relatedCard ? ` [${relatedCard.card.nameVi}]` : '';
-            return `  - ${message.createdAt} · ${message.speaker === 'reader' ? 'Reader' : 'Khách hàng'}${cardText}: ${message.text}`;
+            return `  - ${message.createdAt} · ${message.speaker === 'guide' ? 'Người đọc' : 'Người hỏi'}${cardText}: ${message.text}`;
           })
           .join('\n') + '\n';
     clipboardText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -384,14 +385,14 @@ export default function FreeReadingPage() {
         <div className="text-center border-b border-white/5 pb-4 flex flex-col items-center gap-1.5">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
             <h1 className="font-cinzel text-xl md:text-2xl font-extrabold text-gold-primary tracking-wider drop-shadow-[0_0_8px_var(--color-gold-glow)]">
-              Không Gian Tư Vấn Tarot 2D
+              Không Gian Trải Nghiệm Tarot Tự Do
             </h1>
             <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-white/5 border border-white/10 text-text-secondary uppercase select-none">
-              Pro Workspace
+              Tự Do Không Giới Hạn
             </span>
           </div>
           <p className="font-lora text-[11px] md:text-xs text-text-secondary italic">
-            Bàn 2D tự do cho reader chuyên nghiệp: kéo thả, xoay, khóa, ghi chú từng lá và lưu lại trao đổi với khách hàng.
+            Không gian mở để tự do rút bài, sắp đặt, kết nối ý nghĩa và ghi lại mọi cảm nhận trong suốt trải nghiệm.
           </p>
         </div>
 
@@ -433,6 +434,17 @@ export default function FreeReadingPage() {
                 {copySuccess ? '✓ Đã Sao Chép' : '📋 Sao Chép Kết Quả'}
               </button>
             )}
+
+            <button
+              onClick={() => setShowCardControlPanel(!showCardControlPanel)}
+              className={`px-3.5 py-2 text-[10px] font-sans font-bold uppercase tracking-wider rounded-xl border cursor-pointer transition-all active:scale-95 shadow-lg ${
+                showCardControlPanel
+                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                  : 'bg-white/5 border-white/10 hover:border-gold-primary/35 text-text-secondary hover:text-gold-light'
+              }`}
+            >
+              {showCardControlPanel ? 'Ẩn Bảng Điều Khiển Lá' : 'Bật Bảng Điều Khiển Lá'}
+            </button>
 
             {/* Toggle Notepad button */}
             <button
@@ -539,6 +551,7 @@ export default function FreeReadingPage() {
             <FreeTarotWorkspace2D
               cards={allDrawnCards}
               activeCardId={activeCardId}
+              showCardControlPanel={showCardControlPanel}
               onSelectCard={setActiveCardId}
               onUpdateCard={handleUpdateWorkspaceCard}
               onInspectCard={handleCardInspect}
@@ -564,10 +577,10 @@ export default function FreeReadingPage() {
                     <div className="flex items-center gap-2">
                       <div>
                         <h4 className="font-cinzel text-xs font-bold text-gold-light tracking-widest uppercase">
-                          Phiên Trao Đổi Tarot
+                          Phiên Trải Nghiệm Tarot
                         </h4>
                         <p className="text-[9px] text-text-secondary/55 font-lora italic leading-none mt-1">
-                          Ghi hội thoại, insight và kết luận với khách hàng
+                          Ghi lại trao đổi, cảm nhận và các kết luận trong phiên
                         </p>
                       </div>
                     </div>
@@ -589,18 +602,18 @@ export default function FreeReadingPage() {
                       {conversation.length > 0 ? (
                         conversation.map((message) => {
                           const relatedCard = allDrawnCards.find((card) => card.id === message.relatedCardId);
-                          const isReader = message.speaker === 'reader';
+                          const isGuide = message.speaker === 'guide';
                           return (
                             <div
                               key={message.id}
                               className={`max-w-[92%] rounded-2xl px-3 py-2 border text-xs leading-relaxed ${
-                                isReader
+                                isGuide
                                   ? 'self-start bg-gold-primary/10 border-gold-primary/18 text-text-primary rounded-tl-sm'
                                   : 'self-end bg-white/[0.055] border-white/10 text-text-primary rounded-tr-sm'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-2 text-[8px] font-sans font-bold uppercase tracking-wider text-text-secondary/60 mb-1">
-                                <span>{isReader ? 'Reader' : 'Khách hàng'}</span>
+                                <span>{isGuide ? 'Người đọc' : 'Người hỏi'}</span>
                                 <span>{message.createdAt}</span>
                               </div>
                               <p className="font-lora whitespace-pre-line">{message.text}</p>
@@ -625,25 +638,25 @@ export default function FreeReadingPage() {
                       <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
-                          onClick={() => setConversationSpeaker('reader')}
+                          onClick={() => setConversationSpeaker('guide')}
                           className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            conversationSpeaker === 'reader'
+                            conversationSpeaker === 'guide'
                               ? 'bg-gold-primary/18 border-gold-primary text-gold-light'
                               : 'bg-white/5 border-white/10 text-text-secondary hover:border-gold-primary/30'
                           }`}
                         >
-                          Reader
+                          Người đọc
                         </button>
                         <button
                           type="button"
-                          onClick={() => setConversationSpeaker('client')}
+                          onClick={() => setConversationSpeaker('seeker')}
                           className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            conversationSpeaker === 'client'
+                            conversationSpeaker === 'seeker'
                               ? 'bg-[#2a9d8f]/18 border-[#2a9d8f] text-[#48cae4]'
                               : 'bg-white/5 border-white/10 text-text-secondary hover:border-[#2a9d8f]/35'
                           }`}
                         >
-                          Khách hàng
+                          Người hỏi
                         </button>
                       </div>
                       <textarea
@@ -664,7 +677,7 @@ export default function FreeReadingPage() {
 
                   <div className="flex-1 min-h-[260px] py-1 flex flex-col relative z-10">
                     <label className="text-[10px] text-text-secondary uppercase tracking-wider font-sans font-bold mb-2">
-                      Nhật ký tổng hợp của reader
+                      Nhật ký tổng hợp
                     </label>
                     <textarea
                       value={journalNotes}
@@ -734,6 +747,7 @@ export default function FreeReadingPage() {
           card={selectedCard}
           isOpen={isInspectorOpen}
           onClose={() => setIsInspectorOpen(false)}
+          singleCardOnly={true}
         />
       )}
     </div>

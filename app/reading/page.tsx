@@ -154,14 +154,14 @@ export default function ReadingHub() {
               <div className="flex-1 flex flex-col gap-1 text-left font-lora">
                 <div className="flex items-center gap-2">
                   <h3 className="font-cinzel font-bold text-base md:text-lg text-text-primary group-hover:text-gold-light transition-colors">
-                    Không Gian Tư Vấn Tarot 2D (Chế Độ Tự Do)
+                    Không Gian Trải Nghiệm Tarot Tự Do
                   </h3>
                   <span className="px-2 py-0.5 text-[8px] font-sans font-semibold tracking-wider rounded bg-white/5 border border-white/10 text-text-secondary uppercase select-none">
                     Tự Luận Giải ✏️
                   </span>
                 </div>
                 <p className="text-xs md:text-sm text-text-secondary leading-relaxed">
-                  Workspace 2D cho reader chuyên nghiệp: nhặt bài qua 3 vòng, kéo thả tự do, xoay/khóa/ghi chú từng lá và ghi lại trao đổi với khách hàng.
+                  Không gian mở để nhặt bài qua 3 vòng, kéo thả tự do, xoay/khóa/ghi chú từng lá và lưu lại toàn bộ cảm nhận trong phiên.
                 </p>
               </div>
               <div className="text-gold-primary group-hover:translate-x-1.5 transition-transform duration-200">

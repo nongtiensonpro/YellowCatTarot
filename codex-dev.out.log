@@ -12,3 +12,30 @@
  GET / 200 in 149ms (next.js: 34ms, application-code: 115ms)
  GET /reading/free 200 in 90ms (next.js: 7ms, application-code: 83ms)
  GET /reading/free 200 in 219ms (next.js: 11ms, application-code: 208ms)
+ GET /reading 200 in 55ms (next.js: 36ms, application-code: 19ms)
+ GET /reading/free 200 in 21ms (next.js: 5ms, application-code: 15ms)
+ GET /reading/free 200 in 77ms (next.js: 2ms, application-code: 74ms)
+✓ Compiled in 1052ms
+ GET /reading/free 200 in 171ms (next.js: 118ms, application-code: 54ms)
+✓ Compiled in 160ms
+ GET /reading/free 200 in 163ms (next.js: 90ms, application-code: 73ms)
+✓ Compiled in 89ms
+ GET /reading/free 200 in 152ms (next.js: 97ms, application-code: 55ms)
+ GET /reading/free 200 in 158ms (next.js: 84ms, application-code: 74ms)
+ GET /reading/free 200 in 231ms (next.js: 7ms, application-code: 224ms)
+ GET /reading/free 200 in 84ms (next.js: 6ms, application-code: 78ms)
+✓ Compiled in 61ms
+ GET /reading/free 200 in 113ms (next.js: 67ms, application-code: 47ms)
+ GET /reading/free 200 in 173ms (next.js: 4ms, application-code: 169ms)
+ GET /reading/free 200 in 68ms (next.js: 4ms, application-code: 65ms)
+✓ Compiled in 155ms
+ GET /reading/free 200 in 631ms (next.js: 84ms, application-code: 547ms)
+ GET /reading/free 200 in 281ms (next.js: 81ms, application-code: 200ms)
+ GET /reading/free 200 in 138ms (next.js: 8ms, application-code: 130ms)
+ GET /reading/free 200 in 138ms (next.js: 38ms, application-code: 100ms)
+ GET /reading/free 200 in 138ms (next.js: 67ms, application-code: 72ms)
+ GET /reading/free 200 in 139ms (next.js: 99ms, application-code: 40ms)
+✓ Compiled in 135ms
+ GET /reading/free 200 in 142ms (next.js: 89ms, application-code: 53ms)
+✓ Compiled in 56ms
+ GET /reading/free 200 in 120ms (next.js: 82ms, application-code: 38ms)
