@@ -34,7 +34,7 @@ export default function ThreeCardReading() {
   const [userQuestion, setUserQuestion] = useState('');
 
   // Cards state
-  const [deckCount, setDeckCount] = useState(13); // Nhiều lá hơn cho 3 lá trải bài
+  const [deckCount, setDeckCount] = useState(78);
   const [drawnCards, setDrawnCards] = useState<{
     card: TarotCardType;
     isReversed: boolean;
@@ -64,7 +64,9 @@ export default function ThreeCardReading() {
       case 'SHUFFLING':
         return {
           state: 'shuffle',
-          speech: 'Mèo Vàng đang kết hợp năng lượng thời gian của bạn vào các quân bài... 🐾🕰️',
+          speech: drawnCards.length === 0
+            ? 'Mèo Vàng đang kết hợp năng lượng thời gian của bạn vào các quân bài... 🐾🕰️'
+            : 'Mèo Vàng đang xáo bài để bạn nhặt tiếp lá mới nhé... ✨🐾',
         };
       case 'PICKING':
         const drawnCount = drawnCards.filter((c) => c.isFlipped).length;
@@ -136,6 +138,11 @@ export default function ThreeCardReading() {
     // Nếu đã rút đủ 3 lá
     if (newDrawn.length === 3) {
       setStep('RESULT');
+    } else {
+      setStep('SHUFFLING');
+      setTimeout(() => {
+        setStep('PICKING');
+      }, 1500);
     }
   };
 
@@ -238,21 +245,42 @@ export default function ThreeCardReading() {
         </div>
 
         {/* Core Screen */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start mt-2">
+        <div className="flex flex-col gap-6 items-stretch mt-2">
           
-          {/* LEFT COLUMN: Character Mèo Vàng */}
-          <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-bg-surface/10 border border-gold-primary/5 rounded-2xl md:sticky md:top-24">
+          {/* TOP COLUMN: Character Mèo Vàng (Full width, centered) */}
+          <div className="w-full max-w-xl mx-auto flex flex-col items-center justify-center p-4 bg-bg-surface/10 border border-gold-primary/5 rounded-2xl z-20 gap-4">
+            
+            {/* Lớp thông báo Tiến trình rút bài ngay trên đầu Mèo Vàng */}
+            {step === 'PICKING' && (
+              <div className="w-full flex flex-col items-center gap-2 border-b border-gold-primary/10 pb-4 animate-[fadeIn_0.3s_ease-out]">
+                <div className="px-3 py-1 rounded-full bg-gold-primary/10 border border-gold-primary/20 text-gold-light text-xs font-sans font-bold tracking-wider uppercase flex items-center gap-1.5 shadow-[0_0_8px_rgba(244,162,97,0.15)]">
+                  <span>🔮 Tiến Trình:</span>
+                  <span className="text-white">{drawnCards.length} / 3 Lá</span>
+                </div>
+              </div>
+            )}
+
             <YellowCat3D
               state={catProps.state}
               size="lg"
               speechBubble={catProps.speech}
               drawnCardsCount={drawnCards.filter((c) => c.isFlipped).length}
-              className="mt-14"
+              className={step === 'PICKING' ? "mt-2" : "mt-4"}
             />
+
+            {/* Nút rút bài nhanh gần gũi với Mèo Vàng */}
+            {step === 'PICKING' && (
+              <button
+                onClick={handleAutoDraw}
+                className="w-full py-2.5 font-sans font-bold text-xs uppercase tracking-widest rounded-xl bg-gold-primary/15 border border-gold-primary/45 hover:border-gold-light hover:bg-gold-primary/25 text-gold-light hover:text-white cursor-pointer transition-all active:scale-95 shadow-[0_0_10px_rgba(244,162,97,0.1)] flex items-center justify-center gap-1.5 animate-[fadeIn_0.3s_ease-out]"
+              >
+                <span>🪄 Mèo Vàng Rút Nhanh</span>
+              </button>
+            )}
           </div>
 
-          {/* RIGHT COLUMN: Table and cards */}
-          <div className="md:col-span-8 flex flex-col gap-6 items-stretch">
+          {/* BOTTOM COLUMN: Table and cards */}
+          <div className="w-full flex flex-col gap-6 items-stretch relative z-10">
             
             {/* STEP 1: INPUT QUESTION */}
             {step === 'INPUT' && (
@@ -284,23 +312,11 @@ export default function ThreeCardReading() {
 
             {/* STEP 2: SHUFFLING & CARD DECK */}
             {(step === 'SHUFFLING' || step === 'PICKING') && (
-              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-hidden animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
+              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
                 {/* Magic bg rings */}
                 <div className="absolute w-[300px] h-[300px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_60s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 
-                {step === 'PICKING' && (
-                  <div className="w-full flex flex-col sm:flex-row justify-between items-center px-4 gap-3 z-20">
-                    <span className="text-[10px] md:text-xs font-sans text-gold-light/80 uppercase tracking-widest font-bold">
-                      Đã rút: {drawnCards.length} / 3 Lá
-                    </span>
-                    <button
-                      onClick={handleAutoDraw}
-                      className="px-3.5 py-1.5 font-sans font-bold text-[10px] uppercase tracking-wider rounded-lg bg-gold-primary/10 border border-gold-primary/40 text-gold-light hover:bg-gold-primary/20 cursor-pointer transition-all"
-                    >
-                      🪄 Rút 3 Lá Nhanh
-                    </button>
-                  </div>
-                )}
+                {/* Đã chuyển Tiến trình và Rút Nhanh sang cạnh Mèo Vàng ở cột trái */}
 
                 <CardDeck
                   cardsCount={deckCount}

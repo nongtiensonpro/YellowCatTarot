@@ -82,7 +82,9 @@ export default function CelticCrossReading() {
       case 'SHUFFLING':
         return {
           state: 'shuffle',
-          speech: 'Mèo Vàng đang thu nhận chuyển động tay của bạn để đảo trộn các năng lượng vũ trụ huyền bí... 🌌🐾',
+          speech: drawnCards.length === 0
+            ? 'Mèo Vàng đang thu nhận chuyển động tay của bạn để đảo trộn các năng lượng vũ trụ huyền bí... 🌌🐾'
+            : 'Mèo Vàng đang xáo bài để chủ nhân nhặt tiếp lá mới nhé... ✨🐾',
         };
       case 'PICKING':
         const drawnCount = drawnCards.length;
@@ -141,8 +143,8 @@ export default function CelticCrossReading() {
         const shuffledOrder = await hyperShuffle(events, timings);
         
         const newDeck = createNewDeck(shuffledOrder);
-        // Prepare 12 face down cards for the picker arc (generously more than 10)
-        const initialFaceDown = prepareFaceDownCards(newDeck, 12);
+        // Prepare 78 face down cards for the picker arc (representing the full standard deck)
+        const initialFaceDown = prepareFaceDownCards(newDeck, 78);
         
         setDeckState(newDeck);
         setFaceDownCards(initialFaceDown);
@@ -184,8 +186,13 @@ export default function CelticCrossReading() {
         setStep('RESULT');
       } else {
         // Generate a fresh set of face down cards for the next card selection step
-        const nextFaceDown = prepareFaceDownCards(deckState, 12);
+        const nextFaceDown = prepareFaceDownCards(deckState, 78 - newDrawn.length);
         setFaceDownCards(nextFaceDown);
+        
+        setStep('SHUFFLING');
+        setTimeout(() => {
+          setStep('PICKING');
+        }, 1500);
       }
     } catch (err) {
       console.error(err);
@@ -220,7 +227,7 @@ export default function CelticCrossReading() {
 
       // Pull 10 cards securely
       for (let i = 0; i < 10; i++) {
-        const batch = prepareFaceDownCards(tempDeck, 12);
+        const batch = prepareFaceDownCards(tempDeck, 78 - results.length);
         const drawn = userPicksFromFaceDown(tempDeck, batch, 0); // Pick first slot
         const cardDetail = getCardById(drawn.cardId);
         
@@ -334,22 +341,43 @@ export default function CelticCrossReading() {
           </button>
         </div>
 
-        {/* CORE SCREEN LAYOUT (2 Columns) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-2">
+        {/* CORE SCREEN LAYOUT (Vertical Stack) */}
+        <div className="flex flex-col gap-6 items-stretch mt-2">
           
-          {/* LEFT COLUMN: Animated 3D Yellow Cat Mascot */}
-          <div className="lg:col-span-4 flex flex-col items-center justify-center p-4 bg-bg-surface/10 border border-gold-primary/5 rounded-2xl lg:sticky lg:top-24 z-10">
+          {/* TOP COLUMN: Animated 3D Yellow Cat Mascot (Full width, centered) */}
+          <div className="w-full max-w-xl mx-auto flex flex-col items-center justify-center p-4 bg-bg-surface/10 border border-gold-primary/5 rounded-2xl z-20 gap-4">
+            
+            {/* Lớp thông báo Tiến trình rút bài ngay trên đầu Mèo Vàng */}
+            {step === 'PICKING' && (
+              <div className="w-full flex flex-col items-center gap-2 border-b border-gold-primary/10 pb-4 animate-[fadeIn_0.3s_ease-out]">
+                <div className="px-3 py-1 rounded-full bg-gold-primary/10 border border-gold-primary/20 text-gold-light text-xs font-sans font-bold tracking-wider uppercase flex items-center gap-1.5 shadow-[0_0_8px_rgba(244,162,97,0.15)]">
+                  <span>🔮 Tiến Trình:</span>
+                  <span className="text-white">{drawnCards.length} / 10 Lá</span>
+                </div>
+              </div>
+            )}
+
             <YellowCat3D
               state={catProps.state}
               size="lg"
               speechBubble={catProps.speech}
               drawnCardsCount={drawnCards.filter((c) => c.isFlipped).length}
-              className="mt-6 lg:mt-14"
+              className={step === 'PICKING' ? "mt-2" : "mt-4"}
             />
+
+            {/* Nút rút nhanh đưa về gần gũi bên Mèo Vàng */}
+            {step === 'PICKING' && (
+              <button
+                onClick={handleAutoDraw}
+                className="w-full py-2.5 font-sans font-bold text-xs uppercase tracking-widest rounded-xl bg-gold-primary/15 border border-gold-primary/45 hover:border-gold-light hover:bg-gold-primary/25 text-gold-light hover:text-white cursor-pointer transition-all active:scale-95 shadow-[0_0_10px_rgba(244,162,97,0.1)] flex items-center justify-center gap-1.5 animate-[fadeIn_0.3s_ease-out]"
+              >
+                <span>🪄 Mèo Vàng Rút Nhanh</span>
+              </button>
+            )}
           </div>
 
           {/* RIGHT COLUMN: Table Interactive Board */}
-          <div className="lg:col-span-8 flex flex-col gap-6 items-stretch">
+          <div className="w-full flex flex-col gap-6 items-stretch relative z-10">
             
             {/* STEP 1: INPUT QUESTION */}
             {step === 'INPUT' && (
@@ -385,24 +413,12 @@ export default function CelticCrossReading() {
 
             {/* STEP 2: SHUFFLING & CARD DECK */}
             {(step === 'SHUFFLING' || step === 'PICKING') && (
-              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-hidden animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
+              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
                 {/* Magic background concentric rings */}
                 <div className="absolute w-[320px] h-[320px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_80s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 <div className="absolute w-[200px] h-[200px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_40s_linear_infinite_reverse] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
 
-                {step === 'PICKING' && (
-                  <div className="w-full flex flex-col sm:flex-row justify-between items-center px-4 gap-3 z-20">
-                    <span className="text-[10px] md:text-xs font-sans text-gold-light/80 uppercase tracking-widest font-bold">
-                      Đã rút: {drawnCards.length} / 10 Lá Bài
-                    </span>
-                    <button
-                      onClick={handleAutoDraw}
-                      className="px-3.5 py-1.5 font-sans font-bold text-[10px] uppercase tracking-wider rounded-lg bg-gold-primary/15 border border-gold-primary/45 text-gold-light hover:bg-gold-primary/25 cursor-pointer transition-all active:scale-95"
-                    >
-                      🪄 Mèo Vàng rút nhanh 10 Lá
-                    </button>
-                  </div>
-                )}
+                {/* Đã chuyển Tiến trình và Rút Nhanh sang cạnh Mèo Vàng ở cột trái */}
 
                 <CardDeck
                   cardsCount={faceDownCards.length}
@@ -417,18 +433,24 @@ export default function CelticCrossReading() {
             {(step === 'RESULT' || step === 'INTERPRETING' || step === 'COMPLETE') && drawnCards.length > 0 && (
               <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]">
                 
-                {/* Table board layout */}
-                <div className="bg-bg-surface/35 border border-gold-primary/15 rounded-2xl p-4 md:p-6 shadow-2xl flex flex-col gap-4 items-center overflow-x-auto">
-                  <div className="w-full flex justify-between items-center border-b border-white/5 pb-3">
-                    <span className="text-[10px] font-sans font-bold text-gold-light/60 uppercase tracking-widest">
-                      Bàn Trải Bài Celtic Cross Cổ Điển:
-                    </span>
+                {/* Table board layout — Modern glassmorphism */}
+                <div className="relative bg-white/[0.02] border border-white/[0.05] rounded-3xl p-4 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col gap-3 items-center overflow-hidden">
+                  {/* Decorative top accent */}
+                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-primary/20 to-transparent" />
+
+                  <div className="w-full flex justify-between items-center pb-3 border-b border-white/[0.04]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-gold-primary/40 animate-pulse" />
+                      <span className="text-[9px] sm:text-[10px] font-sans font-bold text-gold-light/50 uppercase tracking-[0.15em]">
+                        Sơ Đồ Celtic Cross
+                      </span>
+                    </div>
                     
                     <button
                       onClick={handleRevealAll}
-                      className="px-3 py-1.5 text-4xs font-sans font-bold uppercase tracking-wider rounded-lg bg-white/5 hover:bg-white/10 border border-gold-primary/20 text-gold-light transition-all cursor-pointer"
+                      className="px-3 py-1.5 text-[9px] sm:text-[10px] font-sans font-semibold uppercase tracking-wider rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-gold-primary/25 text-gold-light/70 hover:text-gold-light transition-all cursor-pointer backdrop-blur-sm"
                     >
-                      🔄 Lật Mở Lại Sơ Đồ
+                      🔄 Lật Mở Sơ Đồ
                     </button>
                   </div>
 
@@ -442,9 +464,9 @@ export default function CelticCrossReading() {
                     <button
                       onClick={handleGetInterpretation}
                       disabled={aiLoading || drawnCards.some(c => !c.isFlipped)}
-                      className="w-full max-w-lg mt-4 py-4 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_12px_var(--color-gold-glow)] flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:pointer-events-none active:scale-99"
+                      className="w-full max-w-md mt-3 py-3.5 font-sans font-bold text-xs sm:text-sm uppercase tracking-widest rounded-2xl bg-gradient-to-r from-gold-primary to-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_20px_rgba(244,162,97,0.25)] hover:shadow-[0_0_30px_rgba(244,162,97,0.4)] flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none active:scale-[0.98]"
                     >
-                      <span>✨ Xin Luận Giải Celtic Cross (10 Lá)</span>
+                      <span>✨ Xin Luận Giải Celtic Cross</span>
                     </button>
                   )}
                 </div>

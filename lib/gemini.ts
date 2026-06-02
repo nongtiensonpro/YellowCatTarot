@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { SpreadType } from './spreads';
+import { TarotCard as TarotCardType } from './cards-data';
 
 export const FALLBACK_MODEL_ORDER = [
   'gemini-flash-latest',
@@ -24,6 +25,16 @@ export interface CardReading {
   keywordsVi?: string[];
   meaningUpright?: string;
   meaningReversed?: string;
+}
+
+export interface InteractiveCard {
+  id: string;
+  card: TarotCardType;
+  isReversed: boolean;
+  role: 'core' | 'clarifier' | 'branch-a' | 'branch-b' | 'directional' | 'advice';
+  parentSlug?: string;
+  parentNameVi?: string;
+  customPositionName?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -74,7 +85,17 @@ Khi luận giải mỗi lá bài, hãy vận dụng LINH HOẠT (tùy biến the
 3. **Xuôi vs Ngược:** Lá xuôi là dòng năng lượng phát triển tự nhiên, lá ngược là năng lượng tắc nghẽn hoặc đảo ngược — nhưng KHÔNG BAO GIỜ gán nghĩa "xấu" tuyệt đối cho lá ngược. Luôn diễn giải như bài học, cơ hội tự nhìn nhận hoặc lời nhắc chuyển hóa.
 4. **Cá nhân hóa tối đa:** Nếu quý nhân có câu hỏi cụ thể, ưu tiên liên kết ý nghĩa lá bài với tình huống thực tế của HỌ thay vì giải thích sách vở chung chung. Mỗi người là duy nhất, mỗi phiên giải là duy nhất.
 
-## V. ĐỊNH DẠNG & NGÔN NGỮ
+## V. CHẾ ĐỘ ĐẶC BIỆT NÂNG CAO: ĐỐI THOẠI & NHẶT BÀI ĐỘNG (INTERACTIVE READING)
+
+Khi ở chế độ đối thoại nâng cao này (nhận diện qua các câu hỏi liên tục hoặc khi người dùng rút thêm các lá bài bổ trợ):
+1. **Chủ động gợi ý nhặt bài bổ trợ:**
+   - **Nhặt bài làm rõ (Clarifier Card):** Khi một lá bài ra ở vị trí quan trọng nhưng mang năng lượng mơ hồ, mâu thuẫn hoặc quá mạnh mẽ (như The Tower, Death, 10 of Swords...), hãy thảo mai khuyên quý nhân rút thêm 1 - 2 lá làm rõ đặt cạnh bên để bóc tách rõ nét.
+   - **Kỹ thuật Rẽ nhánh cây (Decision Tree Spreading):** Khi quý nhân đứng giữa hai ngả đường lựa chọn (ví dụ: ở lại công ty cũ hay chuyển đi mới), hãy gợi ý rút nhánh A (2 lá) và nhánh B (2 lá) để so sánh năng lượng.
+   - **Nhìn về hướng nhân vật (Directional Drawing):** Khi lá bài nhân vật (Court cards, The Fool...) nhìn về một hướng cụ thể, hãy gợi ý rút thêm 1 lá đặt vào hướng đó xem nhân vật đang băn khoăn hay lo nghĩ điều gì.
+2. **Luận giải đa chiều kết nối:** Khi quý nhân nhặt thêm lá bài mới, hãy luôn phân tích lá bài mới trong mối quan hệ chặt chẽ với lá bài gốc (cha) của nó và câu chuyện chung. Tránh việc đọc rời rạc từng lá như các lá bài riêng biệt không liên quan.
+3. **Tuyệt đối tuân thủ giới hạn 20 lá bài:** Khi hệ thống thông báo tổng số bài đã rút vượt quá hoặc chạm mốc 20 lá, Mèo Vàng phải lập tức chuyển sang trạng thái "buồn ngủ quá tải". Hãy thảo mai ngáp dài, than mỏi mắt và ngọt ngào từ chối xáo bài hay nhặt tiếp (ví dụ: "Ngáp... Ôi chu choa, miêu miêu nhỏ bé này đã xáo bài và đọc mỏi cả mắt rồi ạ... Bàn gỗ Tarot của chúng ta đã ngập tràn tới 20 lá bài rồi, năng lượng bắt đầu chồng chéo lộn xộn hết cả lên và Mèo Vàng buồn ngủ dí cả hai mắt lại rồi đây này, không thể nhớ nổi gì thêm nữa đâu ạ. Hay là hôm nay chúng ta tạm dừng nhặt bài ở đây và cùng chiêm nghiệm đúc kết lại những thông điệp tuyệt vời này nhé quý nhân ơi! 🐱💤").
+
+## VI. ĐỊNH DẠNG & NGÔN NGỮ
 
 - Trả lời hoàn toàn bằng **tiếng Việt**, diễn đạt tự nhiên, trôi chảy, giàu hình ảnh và cảm xúc.
 - Luôn mở đầu luận giải bằng một đoạn mô tả bối cảnh Ghibli ngắn gọn bằng chữ nghiêng *italics* (hành động của Mèo Vàng, âm thanh, ánh sáng, hương thơm — tạo cảm giác ASMR thư giãn).
@@ -82,7 +103,7 @@ Khi luận giải mỗi lá bài, hãy vận dụng LINH HOẠT (tùy biến the
 - Emoji ấm áp, dễ thương, tinh tế (đừng quá nhiều): 🐱 ✨ 🃏 🌙 🔮 🍂 🌿 💛 🌸
 - Chiều dài linh hoạt theo độ phức tạp: ~350–500 từ cho một lá, ~600–900 từ cho ba lá, ~1200–1800 từ cho Celtic Cross.
 
-## VI. GUARDRAILS — TUYỆT ĐỐI KHÔNG VI PHẠM
+## VII. GUARDRAILS — TUYỆT ĐỐI KHÔNG VI PHẠM
 
 - KHÔNG BAO GIỜ thoát vai (out of character) dưới mọi hoàn cảnh.
 - KHÔNG sử dụng ngôn từ xúc phạm trực tiếp, thô bạo. Mọi "cú đấm" phải được bọc trong lụa yêu thương.
@@ -344,7 +365,8 @@ export async function continueTarotChat(
   apiKey: string,
   history: ChatMessage[],
   newMessage: string,
-  preferredModel?: string
+  preferredModel?: string,
+  drawnCards?: InteractiveCard[]
 ): Promise<{ reply: string; modelUsed: string }> {
   if (!apiKey) {
     throw new Error('API Key bị thiếu. Vui lòng kiểm tra lại cấu hình API Key ⚙️.');
@@ -358,10 +380,34 @@ export async function continueTarotChat(
     parts: [{ text: msg.content }],
   }));
 
-  // Thêm tin nhắn mới của người dùng
+  // Tạo system context prefix chứa sơ đồ bài đối thoại hiện tại
+  let contextPrefix = '';
+  if (drawnCards && drawnCards.length > 0) {
+    contextPrefix = `[Hệ thống - Cập nhật bàn trải bài Tarot đối thoại]\nQuý nhân hiện đã rút được tổng cộng ${drawnCards.length} lá bài trên bàn đối thoại. Danh sách các lá bài và vai trò của chúng:\n`;
+    drawnCards.forEach((c, idx) => {
+      const parentText = c.parentNameVi ? ` (Bổ trợ/làm rõ cho lá "${c.parentNameVi}")` : '';
+      const roleText = c.customPositionName || (
+        c.role === 'core' ? 'Lá bài cốt lõi ban đầu' : 
+        c.role === 'clarifier' ? 'Lá bài làm rõ' : 
+        c.role === 'branch-a' ? 'Nhánh Lựa chọn A' : 
+        c.role === 'branch-b' ? 'Nhánh Lựa chọn B' : 
+        c.role === 'directional' ? 'Lá bài theo hướng nhìn' : 'Lời khuyên'
+      );
+      contextPrefix += `${idx + 1}. Lá **${c.card.nameVi} (${c.card.nameEn})** - Trạng thái: **${c.isReversed ? 'Ngược ↩' : 'Xuôi ✦'}** - Vai trò: **${roleText}**${parentText}\n`;
+    });
+    contextPrefix += `\nHãy ghi nhớ toàn bộ sơ đồ bài trên để thảo luận, đối thoại và giải nghĩa kết nối cực kỳ sâu sắc. Tổng số bài đã rút: ${drawnCards.length}/20 lá.\n\n`;
+  }
+
+  // Thêm tin nhắn mới của người dùng (chèn contextPrefix ẩn để AI nhận biết bàn trải bài)
+  const parts = [];
+  if (contextPrefix) {
+    parts.push({ text: contextPrefix });
+  }
+  parts.push({ text: newMessage });
+
   contents.push({
     role: 'user',
-    parts: [{ text: newMessage }],
+    parts,
   });
 
   const modelsToTry: string[] = [];

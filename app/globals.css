@@ -194,3 +194,13 @@
   background: #ffd166;
 }
 
+@keyframes goldDash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.stroke-dash-glow {
+  animation: goldDash 2s linear infinite;
+}
+

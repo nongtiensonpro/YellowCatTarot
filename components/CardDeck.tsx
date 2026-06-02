@@ -18,63 +18,124 @@ export default function CardDeck({
   isDeckSpread,
 }: CardDeckProps) {
   const [deck, setDeck] = useState<number[]>([]);
+  const [screenWidth, setScreenWidth] = useState(768); // Giá trị mặc định an toàn cho SSR
+
+  // Khởi tạo và theo dõi kích thước màn hình để responsive hoàn hảo
+  useEffect(() => {
+    setScreenWidth(window.innerWidth);
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Initialize deck keys
   useEffect(() => {
     setDeck(Array.from({ length: cardsCount }, (_, i) => i));
   }, [cardsCount]);
 
-  // Framer Motion variants for shuffling and spreading
+  // ═══════════════════════════════════════════════════════════════
+  // LAYOUT ENGINE: Tính toán bố cục đa hàng thích ứng thông minh
+  // ═══════════════════════════════════════════════════════════════
+  const isMobile = screenWidth < 768;
+  const baseCardW = isMobile ? 110 : 130;
+  const baseCardH = isMobile ? 190 : 225;
+
+  // Khoảng biên an toàn cho màn hình (24px mỗi bên)
+  const maxSafeWidth = Math.min(screenWidth - 48, 1050);
+
+  // Bộ bài lớn (>= 15 lá): thu nhỏ và chia nhiều hàng
+  const isLargeDeck = cardsCount >= 15;
+  const cardScale = isLargeDeck ? (isMobile ? 0.5 : 0.65) : 1;
+  const scaledW = baseCardW * cardScale;
+  const scaledH = baseCardH * cardScale;
+
+  // Mục tiêu: 4 hàng trên Desktop, 6 hàng trên Mobile để mỗi hàng ~20 / ~13 lá
+  const targetRows = isLargeDeck ? (isMobile ? 6 : 4) : 1;
+  const cardsPerRow = isLargeDeck ? Math.ceil(cardsCount / targetRows) : cardsCount;
+  const numRows = Math.ceil(cardsCount / cardsPerRow);
+
+  // Khoảng cách ngang giữa các tâm lá bài trong mỗi hàng
+  const maxHSpacing = isMobile ? 30 : 52;
+  const hSpacing = cardsPerRow > 1
+    ? Math.min(maxHSpacing, (maxSafeWidth - scaledW) / (cardsPerRow - 1))
+    : 0;
+
+  // Khoảng cách dọc giữa các hàng (cho phép chồng nhẹ ~40% để tiết kiệm chiều cao)
+  const rowGap = scaledH * (isMobile ? 0.62 : 0.68);
+
+  // Chiều cao container động dựa trên số hàng thực tế
+  const dynamicHeight = isLargeDeck
+    ? Math.round((numRows - 1) * rowGap + scaledH + 50)
+    : (isMobile ? 360 : 420);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FRAMER MOTION VARIANTS
+  // ═══════════════════════════════════════════════════════════════
   const getCardVariants = (index: number) => {
-    // 1. Shuffling variant
+    // 1. ── Shuffling: hoạt ảnh xáo trộn bài đồng bộ ──
     if (isShuffling) {
+      const shuffleScale = isLargeDeck ? cardScale : 1;
       return {
         x: [0, (index % 2 === 0 ? 50 : -50), 0, (index % 2 === 0 ? -40 : 40), 0],
         y: [0, -10, 0, -5, 0],
         rotate: [0, (index % 2 === 0 ? 15 : -15), 0, (index % 2 === 0 ? -8 : 8), 0],
-        scale: [1, 1.05, 1, 1.02, 1],
+        scale: [shuffleScale, shuffleScale * 1.05, shuffleScale, shuffleScale * 1.02, shuffleScale],
         transition: {
           duration: 1.5,
           ease: 'easeInOut',
-          delay: index * 0.05,
+          delay: (index % 12) * 0.03,
         },
       };
     }
 
-    // 2. Spread out in a nice arc layout variant
+    // 2. ── Spread: trải bài phẳng nhiều hàng ──
     if (isDeckSpread) {
-      const mid = (cardsCount - 1) / 2;
-      const offset = index - mid; // Khoảng cách tới quân bài giữa
-      
-      // Tính toán vị trí hình cánh cung
-      const radius = 300; // bán kính cung
-      const angle = (offset * 12 * Math.PI) / 180; // góc quay cho mỗi quân (12 độ)
-      
-      const x = Math.sin(angle) * radius;
-      const y = (1 - Math.cos(angle)) * radius + 10;
-      const rotate = offset * 12; // xoay quân bài tương ứng
+      let x = 0;
+      let y = 0;
+
+      if (isLargeDeck) {
+        const rowIndex = Math.floor(index / cardsPerRow);
+        const startIdx = rowIndex * cardsPerRow;
+        const endIdx = Math.min(startIdx + cardsPerRow, cardsCount);
+        const cardsInThisRow = endIdx - startIdx;
+        const colIndex = index - startIdx;
+
+        // Căn giữa ngang từng hàng độc lập
+        const rowMid = (cardsInThisRow - 1) / 2;
+        x = (colIndex - rowMid) * hSpacing;
+
+        // Căn giữa dọc toàn bộ khối các hàng
+        const totalRowsMid = (numRows - 1) / 2;
+        y = (rowIndex - totalRowsMid) * rowGap;
+      } else {
+        const mid = (cardsCount - 1) / 2;
+        x = (index - mid) * hSpacing;
+        y = 0;
+      }
 
       return {
         x,
         y,
-        rotate,
-        scale: 1,
+        rotate: 0,
+        scale: cardScale,
         z: index,
         transition: {
           type: 'spring',
-          stiffness: 70,
-          damping: 14,
-          delay: index * 0.04,
+          stiffness: 80,
+          damping: 16,
+          delay: index * 0.005,
         },
       };
     }
 
-    // 3. Normal stacked deck variant
+    // 3. ── Stacked: bộ bài úp chồng lên nhau ──
     return {
       x: 0,
-      y: index * -1.5, // Chênh lệch nhẹ tạo độ dày cho bộ bài úp
+      y: Math.min(index * -1.2, -30),
       rotate: 0,
-      scale: 1,
+      scale: isLargeDeck ? cardScale : 1,
       z: index,
       transition: {
         type: 'spring',
@@ -85,9 +146,12 @@ export default function CardDeck({
   };
 
   return (
-    <div className="relative w-full h-[360px] md:h-[420px] flex items-center justify-center select-none overflow-visible">
-      {/* Deck center anchor */}
-      <div className="absolute top-[20px] md:top-[40px] flex items-center justify-center overflow-visible">
+    <div
+      className="relative w-full flex items-center justify-center select-none overflow-visible"
+      style={{ height: `${dynamicHeight}px` }}
+    >
+      {/* Neo ở chính giữa khung chứa theo cả chiều dọc và chiều ngang */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center overflow-visible">
         {deck.map((id, index) => {
           const variants = getCardVariants(index);
 
@@ -99,9 +163,9 @@ export default function CardDeck({
               whileHover={
                 isDeckSpread && !isShuffling
                   ? {
-                      y: (variants as any).y - 25, // Bay lên cao hơn khi hover
-                      scale: 1.06,
-                      z: 100, // Nổi lên trên cùng
+                      y: (variants as any).y - (isLargeDeck ? 20 : 30),
+                      scale: isLargeDeck ? cardScale + 0.18 : 1.08,
+                      z: 200,
                       transition: { duration: 0.2, ease: 'easeOut' as any },
                     }
                   : undefined
@@ -111,16 +175,19 @@ export default function CardDeck({
                   onSelectCard(index);
                 }
               }}
-              className={`absolute w-[110px] h-[190px] md:w-[130px] md:h-[225px] origin-bottom-center ${
+              className={`absolute w-[110px] h-[190px] md:w-[130px] md:h-[225px] origin-center group ${
                 isDeckSpread && !isShuffling
-                  ? 'cursor-pointer hover:drop-shadow-[0_0_15px_rgba(255,209,102,0.45)]'
+                  ? 'cursor-pointer hover:drop-shadow-[0_0_20px_rgba(255,209,102,0.55)]'
                   : ''
               }`}
               style={{
-                transformOrigin: 'bottom center',
+                transformOrigin: 'center center',
+                top: isMobile ? '-95px' : '-112.5px',
+                left: isMobile ? '-55px' : '-65px',
+                zIndex: isDeckSpread ? index : undefined,
               }}
             >
-              <CardBack className="border-gold-light/40 group-hover:border-gold-light transition-colors" />
+              <CardBack className="border-gold-light/40 group-hover:border-gold-light transition-all duration-300" />
             </motion.div>
           );
         })}
@@ -128,3 +195,4 @@ export default function CardDeck({
     </div>
   );
 }
+

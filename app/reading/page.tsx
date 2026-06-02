@@ -107,6 +107,39 @@ export default function ReadingHub() {
               </div>
             </Link>
 
+            {/* Option 4: Interactive Tarot Reading (Special Mode) */}
+            <Link
+              href="/reading/interactive"
+              className="group bg-bg-surface/35 border border-gold-primary/30 hover:border-gold-light rounded-2xl p-5 shadow-2xl flex gap-5 items-center transition-all duration-300 hover:-translate-y-1 hover:bg-bg-surface/60 hover:shadow-[0_0_20px_rgba(212,163,89,0.25)] cursor-pointer relative overflow-hidden"
+            >
+              {/* Gold light shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-gold-primary/0 via-gold-primary/5 to-gold-primary/0 -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none" />
+              
+              <div className="w-12 h-16 rounded-lg bg-gold-primary/15 border-2 border-gold-primary/40 flex items-center justify-center text-gold-light text-xl font-bold font-sans group-hover:bg-gold-primary/30 group-hover:border-gold-light transition-all shadow-[0_0_8px_rgba(244,162,97,0.15)] relative">
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-light opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-gold-primary"></span>
+                </span>
+                💬
+              </div>
+              <div className="flex-1 flex flex-col gap-1 text-left font-lora">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-cinzel font-bold text-base md:text-lg text-gold-light group-hover:text-white transition-colors">
+                    Đối Thoại & Nhặt Bài Động (Chế độ Nâng cao)
+                  </h3>
+                  <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-gold-primary/10 border border-gold-primary/35 text-gold-light uppercase animate-[pulse_3s_infinite] select-none">
+                    BETA · THỬ NGHIỆM 🧪
+                  </span>
+                </div>
+                <p className="text-xs md:text-sm text-text-secondary leading-relaxed">
+                  Cuộc hội thoại chiều sâu cùng Mèo Vàng. Vừa trò chuyện, vừa nhặt bài làm rõ hoặc rẽ nhánh cây động lên tới 20 lá để tháo gỡ mọi nút thắt. <span className="text-[10px] text-gold-primary/60 font-lora italic font-medium block mt-0.5">(Tính năng đang trong giai đoạn thử nghiệm để tối ưu hiệu năng)</span>
+                </p>
+              </div>
+              <div className="text-gold-light group-hover:translate-x-1.5 transition-transform duration-200">
+                ➔
+              </div>
+            </Link>
+
           </div>
 
         </div>

@@ -35,7 +35,7 @@ export default function SingleCardReading() {
   const [userQuestion, setUserQuestion] = useState('');
   
   // Game states
-  const [deckCount, setDeckCount] = useState(9);
+  const [deckCount, setDeckCount] = useState(78);
   const [shuffledCards, setShuffledCards] = useState<{ card: TarotCardType; isReversed: boolean }[]>([]);
   const [selectedCardIdx, setSelectedCardIdx] = useState<number | null>(null);
   const [revealedCard, setRevealedCard] = useState<{ card: TarotCardType; isReversed: boolean } | null>(null);
@@ -205,21 +205,21 @@ export default function SingleCardReading() {
         </div>
 
         {/* Core Screen */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start mt-2">
+        <div className="flex flex-col gap-6 items-stretch mt-2">
           
-          {/* LEFT SIDEBAR: Character Mèo Vàng (4/12 size) */}
-          <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-bg-surface/10 border border-gold-primary/5 rounded-2xl md:sticky md:top-24">
+          {/* TOP SIDEBAR: Character Mèo Vàng (Full width, centered) */}
+          <div className="w-full max-w-xl mx-auto flex flex-col items-center justify-center p-4 bg-bg-surface/10 border border-gold-primary/5 rounded-2xl z-20">
             <YellowCat3D
               state={catProps.state}
               size="lg"
               speechBubble={catProps.speech}
               drawnCardsCount={revealedCard ? 1 : 0}
-              className="mt-14"
+              className="mt-4"
             />
           </div>
 
-          {/* RIGHT WORKBOARD: Table and cards interaction (8/12 size) */}
-          <div className="md:col-span-8 flex flex-col gap-6 items-stretch">
+          {/* BOTTOM WORKBOARD: Table and cards interaction */}
+          <div className="w-full flex flex-col gap-6 items-stretch relative z-10">
             
             {/* STEP 1: INPUT QUESTION */}
             {step === 'INPUT' && (
@@ -251,7 +251,7 @@ export default function SingleCardReading() {
 
             {/* STEP 2: SHUFFLING & PICKING CARDS TABLE */}
             {(step === 'SHUFFLING' || step === 'PICKING') && (
-              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-hidden animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
+              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
                 {/* Mystic circle bg */}
                 <div className="absolute w-[300px] h-[300px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_60s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 
