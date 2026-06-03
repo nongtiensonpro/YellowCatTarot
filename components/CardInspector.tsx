@@ -15,10 +15,14 @@ interface CardInspectorProps {
 export default function CardInspector({ card, isOpen, onClose, singleCardOnly = false }: CardInspectorProps) {
   const [currentCard, setCurrentCard] = useState<TarotCard>(card);
   const [zoomScale, setZoomScale] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [showInfo, setShowInfo] = useState(false);
+  const [showDpad, setShowDpad] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef(0);
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   
   // Detect screen size on mount & when isOpen changes
@@ -35,6 +39,7 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
   useEffect(() => {
     setCurrentCard(card);
     setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
   }, [card]);
 
   // Handle keyboard shortcuts (Escape, Left, Right Arrow)
@@ -59,6 +64,7 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
   const handlePrev = () => {
     if (singleCardOnly) return;
     setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
     const currentIndex = tarotCards.findIndex((c) => c.id === currentCard.id);
     const prevIndex = currentIndex > 0 ? currentIndex - 1 : tarotCards.length - 1;
     setCurrentCard(tarotCards[prevIndex]);
@@ -68,40 +74,113 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
   const handleNext = () => {
     if (singleCardOnly) return;
     setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
     const currentIndex = tarotCards.findIndex((c) => c.id === currentCard.id);
     const nextIndex = currentIndex < tarotCards.length - 1 ? currentIndex + 1 : 0;
     setCurrentCard(tarotCards[nextIndex]);
   };
 
+  const getClampedOffset = (x: number, y: number, scale: number) => {
+    if (!cardRef.current || !containerRef.current) return { x: 0, y: 0 };
+    const cardRect = cardRef.current.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    const baseWidth = cardRect.width / scale;
+    const baseHeight = cardRect.height / scale;
+
+    const zoomedWidth = baseWidth * scale;
+    const zoomedHeight = baseHeight * scale;
+
+    const maxX = zoomedWidth > containerRect.width 
+      ? (zoomedWidth - containerRect.width) / 2 
+      : 0;
+    const maxY = zoomedHeight > containerRect.height 
+      ? (zoomedHeight - containerRect.height) / 2 
+      : 0;
+
+    const limitX = maxX + 50;
+    const limitY = maxY + 50;
+
+    return {
+      x: Math.max(-limitX, Math.min(limitX, x)),
+      y: Math.max(-limitY, Math.min(limitY, y)),
+    };
+  };
+
+  const updateZoomAndOffset = (newScale: number) => {
+    const scale = Math.max(1, Math.min(3, newScale));
+    setZoomScale(scale);
+    if (scale === 1) {
+      setPanOffset({ x: 0, y: 0 });
+    } else {
+      setPanOffset(prev => getClampedOffset(prev.x, prev.y, scale));
+    }
+  };
+
   // Zoom In / Zoom Out controls
   const handleZoomIn = () => {
-    setZoomScale(prev => Math.min(prev + 0.5, 3));
+    updateZoomAndOffset(zoomScale + 0.5);
   };
 
   const handleZoomOut = () => {
-    setZoomScale(prev => Math.max(prev - 0.5, 1));
+    updateZoomAndOffset(zoomScale - 0.5);
   };
 
   const handleResetZoom = () => {
-    setZoomScale(1);
+    updateZoomAndOffset(1);
   };
 
   // Double click to zoom toggle
   const handleDoubleClick = () => {
-    if (zoomScale > 1) {
-      setZoomScale(1);
-    } else {
-      setZoomScale(2);
-    }
+    updateZoomAndOffset(zoomScale > 1 ? 1 : 2);
   };
 
   // Handle mouse wheel zoom
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.deltaY < 0) {
-      setZoomScale(prev => Math.min(prev + 0.25, 3));
-    } else {
-      setZoomScale(prev => Math.max(prev - 0.25, 1));
-    }
+    updateZoomAndOffset(zoomScale + (e.deltaY < 0 ? 0.25 : -0.25));
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (zoomScale <= 1) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+    
+    e.preventDefault();
+    dragStartRef.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || !dragStartRef.current || zoomScale <= 1) return;
+    e.preventDefault();
+    const rawX = e.clientX - dragStartRef.current.x;
+    const rawY = e.clientY - dragStartRef.current.y;
+    
+    const clamped = getClampedOffset(rawX, rawY, zoomScale);
+    setPanOffset(clamped);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+  };
+
+  const panStep = 120; // Pixels to pan per click
+  const panUp = () => {
+    setPanOffset(prev => getClampedOffset(prev.x, prev.y + panStep, zoomScale));
+  };
+  const panDown = () => {
+    setPanOffset(prev => getClampedOffset(prev.x, prev.y - panStep, zoomScale));
+  };
+  const panLeft = () => {
+    setPanOffset(prev => getClampedOffset(prev.x + panStep, prev.y, zoomScale));
+  };
+  const panRight = () => {
+    setPanOffset(prev => getClampedOffset(prev.x - panStep, prev.y, zoomScale));
   };
 
   // Touch handlers for swipe actions on mobile
@@ -199,6 +278,19 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
                 </button>
               )}
 
+              {/* Toggle D-pad Navigation keys */}
+              {zoomScale > 1 && (
+                <button
+                  onClick={() => setShowDpad(!showDpad)}
+                  className={`p-1.5 md:p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-gold-primary/30 transition-all text-white cursor-pointer text-xs ${
+                    showDpad ? 'text-gold-light border-gold-primary/40 bg-white/10' : ''
+                  }`}
+                  title={showDpad ? "Ẩn bộ điều hướng la bàn" : "Hiện bộ điều hướng la bàn"}
+                >
+                  🧭
+                </button>
+              )}
+
               {/* Toggle Info Panel */}
               <button
                 onClick={() => setShowInfo(!showInfo)}
@@ -240,17 +332,18 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
               style={{ cursor: zoomScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
             >
               <motion.div
+                ref={cardRef}
                 key={currentCard.id}
-                drag={zoomScale > 1}
-                dragConstraints={containerRef}
-                onDragStart={() => setIsDragging(true)}
-                onDragEnd={() => setIsDragging(false)}
-                animate={{ scale: zoomScale }}
-                transition={{ type: 'spring', damping: 25, stiffness: 150 }}
+                animate={{ scale: zoomScale, x: panOffset.x, y: panOffset.y }}
+                transition={isDragging ? { type: 'tween', duration: 0 } : { type: 'spring', damping: 25, stiffness: 150 }}
                 onDoubleClick={handleDoubleClick}
-                className="relative max-h-[70vh] md:max-h-[82vh] aspect-[1501/2553] h-[65vh] md:h-[80vh] rounded-2xl md:rounded-3xl overflow-hidden border-2 border-gold-primary/30 shadow-[0_0_40px_rgba(0,0,0,0.85)]"
+                className="relative max-h-[70vh] md:max-h-[82vh] aspect-[1501/2553] h-[65vh] md:h-[80vh] rounded-2xl md:rounded-3xl overflow-hidden border-2 border-gold-primary/30 shadow-[0_0_40px_rgba(0,0,0,0.85)] select-none"
               >
                 <div className="absolute inset-1.5 border border-white/10 rounded-[inherit] z-10 pointer-events-none" />
                 <Image
@@ -258,12 +351,82 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
                   alt={currentCard.nameVi}
                   fill
                   sizes="(max-width: 768px) 90vw, 50vw"
-                  className="object-cover"
+                  className="object-cover pointer-events-none"
                   priority
                 />
               </motion.div>
-            </div>
 
+              {/* JOYSTICK / NAVIGATION COMPASS */}
+              <AnimatePresence>
+                {zoomScale > 1 && showDpad && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className={`absolute z-40 flex flex-col items-center gap-2 select-none transition-all duration-300 ${
+                      isMobile 
+                        ? (showInfo ? 'bottom-[42vh] left-4 scale-90' : 'bottom-20 left-4 scale-90') 
+                        : 'bottom-6 left-6'
+                    }`}
+                  >
+                    <div className="w-28 h-28 rounded-full bg-black/75 backdrop-blur-md border border-gold-primary/30 relative shadow-2xl flex items-center justify-center">
+                      <div className="absolute inset-2 border border-dashed border-gold-primary/10 rounded-full pointer-events-none" />
+                      
+                      {/* Up Arrow (Moves image down to reveal top) */}
+                      <button
+                        type="button"
+                        onClick={panUp}
+                        className="absolute top-1.5 left-1/2 -translate-x-1/2 w-8 h-8 flex items-center justify-center text-gold-light hover:text-white hover:scale-115 active:scale-90 transition-all cursor-pointer text-sm"
+                        title="Di chuyển lên trên"
+                      >
+                        ▲
+                      </button>
+
+                      {/* Down Arrow (Moves image up to reveal bottom) */}
+                      <button
+                        type="button"
+                        onClick={panDown}
+                        className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-8 h-8 flex items-center justify-center text-gold-light hover:text-white hover:scale-115 active:scale-90 transition-all cursor-pointer text-sm"
+                        title="Di chuyển xuống dưới"
+                      >
+                        ▼
+                      </button>
+
+                      {/* Left Arrow (Moves image right to reveal left side) */}
+                      <button
+                        type="button"
+                        onClick={panLeft}
+                        className="absolute left-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-gold-light hover:text-white hover:scale-115 active:scale-90 transition-all cursor-pointer text-sm"
+                        title="Di chuyển sang trái"
+                      >
+                        ◀
+                      </button>
+
+                      {/* Right Arrow (Moves image left to reveal right side) */}
+                      <button
+                        type="button"
+                        onClick={panRight}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-gold-light hover:text-white hover:scale-115 active:scale-90 transition-all cursor-pointer text-sm"
+                        title="Di chuyển sang phải"
+                      >
+                        ▶
+                      </button>
+
+                      {/* Center Reset button */}
+                      <button
+                        type="button"
+                        onClick={() => setPanOffset({ x: 0, y: 0 })}
+                        className="w-10 h-10 rounded-full bg-gold-primary/20 hover:bg-gold-primary border border-gold-primary/45 text-gold-light hover:text-bg-deep flex flex-col items-center justify-center text-[7px] font-sans font-bold transition-all cursor-pointer shadow-inner leading-none gap-0.5"
+                        title="Căn giữa hình ảnh"
+                      >
+                        <span>RESET</span>
+                        <span>🎯</span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             {!singleCardOnly && (
               <button
                 onClick={handleNext}
@@ -337,8 +500,8 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
                   {/* Quick Usage Tip */}
                   <div className="mt-auto border-t border-white/5 pt-2 text-4xs text-text-secondary/40 font-lora italic text-center hidden md:block">
                     {singleCardOnly
-                      ? 'Cuộn chuột hoặc nhấp đúp để phóng to. Khi đang phóng to, nhấp kéo để di chuyển ảnh.'
-                      : 'Cuộn chuột hoặc nhấp đúp để phóng to. Nhấp kéo để di chuyển. Vuốt màn hình để chuyển bài.'}
+                      ? 'Cuộn chuột hoặc nhấp đúp để phóng to. Khi phóng to, nhấp kéo hoặc sử dụng bộ điều hướng để di chuyển ảnh.'
+                      : 'Cuộn chuột hoặc nhấp đúp để phóng to. Nhấp kéo hoặc sử dụng bộ điều hướng để di chuyển. Vuốt màn hình để chuyển bài.'}
                   </div>
                 </motion.div>
               )}
