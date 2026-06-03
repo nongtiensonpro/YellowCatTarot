@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect, useLayoutEffect } from 'react';
 import TarotCard from '@/components/TarotCard';
 import { TarotCard as TarotCardType } from '@/lib/cards-data';
 import { SOUL_MARKS } from '@/lib/soul-marks';
@@ -102,6 +102,7 @@ export default function FreeTarotWorkspace2D({
   const [showCardLabels, setShowCardLabels] = useState(false);
   const [showLaneLabels, setShowLaneLabels] = useState(false);
   const [showButtonLabels, setShowButtonLabels] = useState(false);
+  const [showToolbar, setShowToolbar] = useState(true);
 
   const boardRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -120,8 +121,145 @@ export default function FreeTarotWorkspace2D({
     scrollTop: number;
   } | null>(null);
   const tapRef = useRef<{ cardId: string; time: number }>({ cardId: '', time: 0 });
+  const rotateDragRef = useRef<{
+    cardId: string;
+    centerX: number;
+    centerY: number;
+    startAngle: number;
+    startRotation: number;
+  } | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [zoom, setZoom] = useState(0.88);
+
+  const scrollTargetRef = useRef<{ left: number; top: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (scrollTargetRef.current && scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollTargetRef.current.left;
+      scrollRef.current.scrollTop = scrollTargetRef.current.top;
+      scrollTargetRef.current = null;
+    }
+  }, [zoom]);
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+
+    const activePointers = new Map<number, { clientX: number; clientY: number }>();
+    let initialPinchDistance: number | null = null;
+    let initialZoom = 1;
+    let pinchCenter: { xClient: number; yClient: number; xBoard: number; yBoard: number } | null = null;
+
+    // WHEEL ZOOM (Ctrl + Mouse Wheel)
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        
+        const rect = scroller.getBoundingClientRect();
+        const xClient = e.clientX - rect.left;
+        const yClient = e.clientY - rect.top;
+
+        const scrollLeft = scroller.scrollLeft;
+        const scrollTop = scroller.scrollTop;
+
+        const xContent = scrollLeft + xClient;
+        const yContent = scrollTop + yClient;
+
+        const xBoard = xContent / zoom;
+        const yBoard = yContent / zoom;
+
+        const zoomFactor = 1 - e.deltaY * 0.0015;
+        let newZoom = zoom * zoomFactor;
+        newZoom = clamp(newZoom, 0.55, 3.0);
+
+        const targetLeft = xBoard * newZoom - xClient;
+        const targetTop = yBoard * newZoom - yClient;
+
+        scrollTargetRef.current = { left: targetLeft, top: targetTop };
+        setZoom(newZoom);
+      }
+    };
+
+    // PINCH ZOOM (Pointer Events)
+    const handlePointerDown = (e: PointerEvent) => {
+      activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+      if (activePointers.size === 2) {
+        // Cancel single-finger pan or card drag
+        dragRef.current = null;
+        panRef.current = null;
+        setIsPanning(false);
+
+        const pointers = Array.from(activePointers.values());
+        const dx = pointers[0].clientX - pointers[1].clientX;
+        const dy = pointers[0].clientY - pointers[1].clientY;
+        initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+        initialZoom = zoom;
+
+        const rect = scroller.getBoundingClientRect();
+        const clientX = (pointers[0].clientX + pointers[1].clientX) / 2;
+        const clientY = (pointers[0].clientY + pointers[1].clientY) / 2;
+        const xClient = clientX - rect.left;
+        const yClient = clientY - rect.top;
+
+        const scrollLeft = scroller.scrollLeft;
+        const scrollTop = scroller.scrollTop;
+
+        pinchCenter = {
+          xClient,
+          yClient,
+          xBoard: (scrollLeft + xClient) / zoom,
+          yBoard: (scrollTop + yClient) / zoom,
+        };
+      }
+    };
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (activePointers.has(e.pointerId)) {
+        activePointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+      }
+
+      if (activePointers.size === 2 && initialPinchDistance !== null && pinchCenter) {
+        const pointers = Array.from(activePointers.values());
+        const dx = pointers[0].clientX - pointers[1].clientX;
+        const dy = pointers[0].clientY - pointers[1].clientY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        const scale = distance / initialPinchDistance;
+        let newZoom = initialZoom * scale;
+        newZoom = clamp(newZoom, 0.55, 3.0);
+
+        const targetLeft = pinchCenter.xBoard * newZoom - pinchCenter.xClient;
+        const targetTop = pinchCenter.yBoard * newZoom - pinchCenter.yClient;
+
+        scrollTargetRef.current = { left: targetLeft, top: targetTop };
+        setZoom(newZoom);
+      }
+    };
+
+    const handlePointerUp = (e: PointerEvent) => {
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) {
+        initialPinchDistance = null;
+        pinchCenter = null;
+      }
+    };
+
+    // Bind event listeners natively
+    scroller.addEventListener('wheel', handleWheel, { passive: false });
+    scroller.addEventListener('pointerdown', handlePointerDown);
+    scroller.addEventListener('pointermove', handlePointerMove);
+    scroller.addEventListener('pointerup', handlePointerUp);
+    scroller.addEventListener('pointercancel', handlePointerUp);
+
+    return () => {
+      scroller.removeEventListener('wheel', handleWheel);
+      scroller.removeEventListener('pointerdown', handlePointerDown);
+      scroller.removeEventListener('pointermove', handlePointerMove);
+      scroller.removeEventListener('pointerup', handlePointerUp);
+      scroller.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [zoom]);
 
   const activeCard = useMemo(
     () => cards.find((card) => card.id === activeCardId) || null,
@@ -249,6 +387,53 @@ export default function FreeTarotWorkspace2D({
     event.currentTarget.releasePointerCapture(event.pointerId);
   };
 
+  const beginRotateDrag = (event: React.PointerEvent<HTMLDivElement>, card: FreeWorkspaceCard) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const cardEl = event.currentTarget.closest('[data-workspace-card]');
+    if (!cardEl) return;
+
+    const rect = cardEl.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const startAngle = Math.atan2(event.clientY - centerY, event.clientX - centerX) * (180 / Math.PI);
+    const startRotation = card.rotation;
+
+    rotateDragRef.current = {
+      cardId: card.id,
+      centerX,
+      centerY,
+      startAngle,
+      startRotation,
+    };
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const moveRotateDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = rotateDragRef.current;
+    if (!drag) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentAngle = Math.atan2(event.clientY - drag.centerY, event.clientX - drag.centerX) * (180 / Math.PI);
+    const deltaAngle = currentAngle - drag.startAngle;
+    
+    let newRotation = drag.startRotation + deltaAngle;
+    
+    onUpdateCard(drag.cardId, { rotation: newRotation });
+  };
+
+  const endRotateDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    rotateDragRef.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   const rotateActive = (delta: number) => {
     if (!activeCard || activeCard.locked) return;
     onUpdateCard(activeCard.id, { rotation: activeCard.rotation + delta });
@@ -266,223 +451,250 @@ export default function FreeTarotWorkspace2D({
 
   return (
     <div className="flex-1 w-full flex flex-col h-full overflow-hidden bg-[#070711]">
-      <div className="flex-shrink-0 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between bg-[#0d0d1a]/60 border-b border-white/10 p-3 select-none">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Back button */}
-          <button
-            type="button"
-            onClick={() => window.location.href = '/reading'}
-            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/40 text-text-secondary hover:text-red-400 text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
-            title="Quay lại danh mục trải bài (Thoát)"
-          >
-            <span>🚪</span>
-            {showButtonLabels && <span className="ml-1 text-[9px]">Thoát</span>}
-          </button>
-
-          {hasCards && onClearBoard && (
+      {showToolbar && (
+        <div className="flex-shrink-0 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between bg-[#0d0d1a]/60 border-b border-white/10 p-3 select-none">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Back button */}
             <button
               type="button"
-              onClick={onClearBoard}
-              className="px-3 py-2 rounded-xl bg-red-950/20 border border-red-500/20 hover:border-red-500/50 hover:bg-red-950/40 text-red-400 text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
-              title="Dọn sạch toàn bộ bàn trải bài"
+              onClick={() => window.location.href = '/reading'}
+              className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/40 text-text-secondary hover:text-red-400 text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+              title="Quay lại danh mục trải bài (Thoát)"
             >
-              <span>🗑️</span>
-              {showButtonLabels && <span className="ml-1 text-[9px]">Dọn Bàn</span>}
+              <span>🚪</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Thoát</span>}
             </button>
-          )}
 
-          {hasCards && onCopyResults && (
+            {hasCards && onClearBoard && (
+              <button
+                type="button"
+                onClick={onClearBoard}
+                className="px-3 py-2 rounded-xl bg-red-950/20 border border-red-500/20 hover:border-red-500/50 hover:bg-red-950/40 text-red-400 text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+                title="Dọn sạch toàn bộ bàn trải bài"
+              >
+                <span>🗑️</span>
+                {showButtonLabels && <span className="ml-1 text-[9px]">Dọn Bàn</span>}
+              </button>
+            )}
+
+            {hasCards && onCopyResults && (
+              <button
+                type="button"
+                onClick={onCopyResults}
+                className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary hover:bg-white/10 text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+                title="Sao chép toàn bộ kết quả phiên trải bài vào Clipboard"
+              >
+                <span>📋</span>
+                {showButtonLabels && <span className="ml-1 text-[9px]">Sao Chép</span>}
+              </button>
+            )}
+
+            {onToggleCardControlPanel && (
+              <button
+                type="button"
+                onClick={onToggleCardControlPanel}
+                className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
+                  showCardControlPanel
+                    ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                    : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
+                }`}
+                title={showCardControlPanel ? 'Ẩn bảng điều khiển lá bài đang chọn' : 'Hiện bảng điều khiển lá bài đang chọn'}
+              >
+                <span>🎴</span>
+                {showButtonLabels && <span className="ml-1 text-[9px]">Bảng Lá</span>}
+              </button>
+            )}
+
+            {onToggleJournal && (
+              <button
+                type="button"
+                onClick={onToggleJournal}
+                className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
+                  showJournal
+                    ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                    : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
+                }`}
+                title={showJournal ? 'Ẩn thanh Nhật Ký & Hội Thoại bên phải' : 'Hiện thanh Nhật Ký & Hội Thoại bên phải'}
+              >
+                <span>📝</span>
+                {showButtonLabels && <span className="ml-1 text-[9px]">Nhật Ký</span>}
+              </button>
+            )}
+
+            {onToggleRoundSettings && (
+              <button
+                type="button"
+                onClick={onToggleRoundSettings}
+                className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-lg ${
+                  showRoundSettings
+                    ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                    : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
+                }`}
+                title="Thiết lập các vòng và chế độ rút bài"
+              >
+                <span>⚙️</span>
+                {showButtonLabels && <span className="ml-1 text-[9px]">Thiết Lập Vòng</span>}
+              </button>
+            )}
+
+            {/* Separator line */}
+            <span className="w-px h-5 bg-white/10 mx-1 hidden sm:inline" />
+
+            {/* Canvas layout controls */}
             <button
-              type="button"
-              onClick={onCopyResults}
-              className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary hover:bg-white/10 text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
-              title="Sao chép toàn bộ kết quả phiên trải bài vào Clipboard"
+              onClick={onAutoArrange}
+              className="px-3 py-2 rounded-xl bg-gold-primary/15 border border-gold-primary/30 hover:border-gold-light text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1"
+              title="Sắp xếp tự động các lá bài về vị trí ban đầu của từng vòng"
             >
-              <span>📋</span>
-              {showButtonLabels && <span className="ml-1 text-[9px]">Sao Chép</span>}
+              <span>🧩</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Sắp Xếp Lại</span>}
             </button>
-          )}
+            
+            <button
+              onClick={() => activeCard && onUpdateCard(activeCard.id, { locked: !activeCard.locked })}
+              disabled={!activeCard}
+              className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none flex items-center gap-1"
+              title={activeCard?.locked ? "Mở khóa vị trí lá bài đang chọn để tự do di chuyển" : "Khóa vị trí lá bài đang chọn chống di chuyển nhầm"}
+            >
+              <span>{activeCard?.locked ? '🔓' : '🔒'}</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">{activeCard?.locked ? 'Mở Khóa' : 'Khóa Lá'}</span>}
+            </button>
+            
+            <button
+              onClick={() => activeCard && onUpdateCard(activeCard.id, { isReversed: !activeCard.isReversed })}
+              disabled={!activeCard}
+              className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none flex items-center gap-1"
+              title="Đảo chiều lá bài đang chọn (Xuôi ✦ / Ngược ↩)"
+            >
+              <span>🔄</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Đảo Chiều</span>}
+            </button>
+            
+            {activeCard && (
+              <button
+                onClick={() => onInspectCard(activeCard.card)}
+                className="px-3 py-2 rounded-xl bg-gold-primary/18 border border-gold-primary/45 hover:bg-gold-primary hover:text-bg-deep text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all shadow-[0_0_10px_rgba(244,162,97,0.12)] flex items-center gap-1"
+                title="Xem chi tiết ý nghĩa và luận giải của lá bài đang chọn"
+              >
+                <span>🔍</span>
+                {showButtonLabels && <span className="ml-1 text-[9px]">Chi Tiết Lá</span>}
+              </button>
+            )}
 
-          {onToggleCardControlPanel && (
+            <button
+              onClick={() => rotateActive(-15)}
+              disabled={!activeCard || activeCard.locked}
+              className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gold-light text-sm cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
+              title="Xoay trái lá bài"
+            >
+              ↺
+            </button>
+            
+            <button
+              onClick={() => rotateActive(15)}
+              disabled={!activeCard || activeCard.locked}
+              className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gold-light text-sm cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
+              title="Xoay phải lá bài"
+            >
+              ↻
+            </button>
+
+            {/* Separator line */}
+            <span className="w-px h-5 bg-white/10 mx-1 hidden sm:inline" />
+
+            {/* Toggle Button Labels Button */}
             <button
               type="button"
-              onClick={onToggleCardControlPanel}
+              onClick={() => setShowButtonLabels(!showButtonLabels)}
               className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
-                showCardControlPanel
+                showButtonLabels
                   ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
-                  : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
+                  : 'bg-white/5 border-white/10 text-text-secondary hover:border-gold-primary/45'
               }`}
-              title={showCardControlPanel ? 'Ẩn bảng điều khiển lá bài đang chọn' : 'Hiện bảng điều khiển lá bài đang chọn'}
+              title={showButtonLabels ? 'Ẩn chữ của các nút trên menu (Chỉ hiện Icon)' : 'Hiện chữ đầy đủ của các nút trên menu'}
             >
-              <span>🎴</span>
-              {showButtonLabels && <span className="ml-1 text-[9px]">Bảng Lá</span>}
+              <span>🏷️</span>
+              <span className="ml-1 text-[9px]">{showButtonLabels ? 'Ẩn Chữ' : 'Hiện Chữ'}</span>
             </button>
-          )}
 
-          {onToggleJournal && (
+            {/* Hide Toolbar Button */}
             <button
               type="button"
-              onClick={onToggleJournal}
-              className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
-                showJournal
-                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
-                  : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
-              }`}
-              title={showJournal ? 'Ẩn thanh Nhật Ký & Hội Thoại bên phải' : 'Hiện thanh Nhật Ký & Hội Thoại bên phải'}
+              onClick={() => setShowToolbar(false)}
+              className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/40 text-text-secondary hover:text-red-400 text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+              title="Ẩn hoàn toàn thanh công cụ (Menu)"
             >
-              <span>📝</span>
-              {showButtonLabels && <span className="ml-1 text-[9px]">Nhật Ký</span>}
+              <span>🔼</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Ẩn Menu</span>}
             </button>
-          )}
+          </div>
 
-          {onToggleRoundSettings && (
-            <button
-              type="button"
-              onClick={onToggleRoundSettings}
-              className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-lg ${
-                showRoundSettings
-                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
-                  : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
-              }`}
-              title="Thiết lập các vòng và chế độ rút bài"
+          <div className="flex flex-wrap items-center gap-4 text-[10px] font-sans font-bold text-text-secondary select-none">
+            <label 
+              className="flex items-center gap-1.5 cursor-pointer hover:text-gold-light transition-colors"
+              title="Ẩn/Hiện nhãn tên và số vòng trực tiếp dưới mỗi lá bài trên bàn"
             >
-              <span>⚙️</span>
-              {showButtonLabels && <span className="ml-1 text-[9px]">Thiết Lập Vòng</span>}
-            </button>
-          )}
-
-          {/* Separator line */}
-          <span className="w-px h-5 bg-white/10 mx-1 hidden sm:inline" />
-
-          {/* Canvas layout controls */}
-          <button
-            onClick={onAutoArrange}
-            className="px-3 py-2 rounded-xl bg-gold-primary/15 border border-gold-primary/30 hover:border-gold-light text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1"
-            title="Sắp xếp tự động các lá bài về vị trí ban đầu của từng vòng"
-          >
-            <span>🧩</span>
-            {showButtonLabels && <span className="ml-1 text-[9px]">Sắp Xếp Lại</span>}
-          </button>
-          
-          <button
-            onClick={() => activeCard && onUpdateCard(activeCard.id, { locked: !activeCard.locked })}
-            disabled={!activeCard}
-            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none flex items-center gap-1"
-            title={activeCard?.locked ? "Mở khóa vị trí lá bài đang chọn để tự do di chuyển" : "Khóa vị trí lá bài đang chọn chống di chuyển nhầm"}
-          >
-            <span>{activeCard?.locked ? '🔓' : '🔒'}</span>
-            {showButtonLabels && <span className="ml-1 text-[9px]">{activeCard?.locked ? 'Mở Khóa' : 'Khóa Lá'}</span>}
-          </button>
-          
-          <button
-            onClick={() => activeCard && onUpdateCard(activeCard.id, { isReversed: !activeCard.isReversed })}
-            disabled={!activeCard}
-            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none flex items-center gap-1"
-            title="Đảo chiều lá bài đang chọn (Xuôi ✦ / Ngược ↩)"
-          >
-            <span>🔄</span>
-            {showButtonLabels && <span className="ml-1 text-[9px]">Đảo Chiều</span>}
-          </button>
-          
-          {activeCard && (
-            <button
-              onClick={() => onInspectCard(activeCard.card)}
-              className="px-3 py-2 rounded-xl bg-gold-primary/18 border border-gold-primary/45 hover:bg-gold-primary hover:text-bg-deep text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all shadow-[0_0_10px_rgba(244,162,97,0.12)] flex items-center gap-1"
-              title="Xem chi tiết ý nghĩa và luận giải của lá bài đang chọn"
+              <input
+                type="checkbox"
+                checked={showCardLabels}
+                onChange={(e) => setShowCardLabels(e.target.checked)}
+                className="accent-gold-primary w-3.5 h-3.5 cursor-pointer rounded"
+              />
+              <span>🔤</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">HIỆN TÊN & VÒNG LÁ BÀI</span>}
+            </label>
+            <label 
+              className="flex items-center gap-1.5 cursor-pointer hover:text-gold-light transition-colors"
+              title="Ẩn/Hiện tên của các vòng trải bài ở mép trái các đường phân làn"
             >
-              <span>🔍</span>
-              {showButtonLabels && <span className="ml-1 text-[9px]">Chi Tiết Lá</span>}
-            </button>
-          )}
+              <input
+                type="checkbox"
+                checked={showLaneLabels}
+                onChange={(e) => setShowLaneLabels(e.target.checked)}
+                className="accent-gold-primary w-3.5 h-3.5 cursor-pointer rounded"
+              />
+              <span>🗺️</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">HIỆN TÊN VÒNG TRẢI</span>}
+            </label>
+          </div>
 
-          <button
-            onClick={() => rotateActive(-15)}
-            disabled={!activeCard || activeCard.locked}
-            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gold-light text-sm cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
-            title="Xoay trái lá bài"
-          >
-            ↺
-          </button>
-          
-          <button
-            onClick={() => rotateActive(15)}
-            disabled={!activeCard || activeCard.locked}
-            className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gold-light text-sm cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
-            title="Xoay phải lá bài"
-          >
-            ↻
-          </button>
-
-          {/* Separator line */}
-          <span className="w-px h-5 bg-white/10 mx-1 hidden sm:inline" />
-
-          {/* Toggle Button Labels Button */}
-          <button
-            type="button"
-            onClick={() => setShowButtonLabels(!showButtonLabels)}
-            className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
-              showButtonLabels
-                ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
-                : 'bg-white/5 border-white/10 text-text-secondary hover:border-gold-primary/45'
-            }`}
-            title={showButtonLabels ? 'Ẩn chữ của các nút trên menu (Chỉ hiện Icon)' : 'Hiện chữ đầy đủ của các nút trên menu'}
-          >
-            <span>🏷️</span>
-            <span className="ml-1 text-[9px]">{showButtonLabels ? 'Ẩn Chữ' : 'Hiện Chữ'}</span>
-          </button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 text-[10px] font-sans font-bold text-text-secondary select-none">
-          <label 
-            className="flex items-center gap-1.5 cursor-pointer hover:text-gold-light transition-colors"
-            title="Ẩn/Hiện nhãn tên và số vòng trực tiếp dưới mỗi lá bài trên bàn"
-          >
+          <div className="flex items-center gap-3 min-w-0">
+            <span 
+              className="text-[10px] font-sans font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap cursor-help"
+              title="Điều chỉnh tỷ lệ hiển thị bàn bài (Zoom)"
+            >
+              {showButtonLabels ? 'Zoom' : '🔎'}
+            </span>
             <input
-              type="checkbox"
-              checked={showCardLabels}
-              onChange={(e) => setShowCardLabels(e.target.checked)}
-              className="accent-gold-primary w-3.5 h-3.5 cursor-pointer rounded"
+              type="range"
+              min="55"
+              max="300"
+              value={Math.round(zoom * 100)}
+              onChange={(event) => setZoom(Number(event.target.value) / 100)}
+              className="w-full xl:w-48 accent-gold-primary"
             />
-            <span>🔤</span>
-            {showButtonLabels && <span className="ml-1 text-[9px]">HIỆN TÊN & VÒNG LÁ BÀI</span>}
-          </label>
-          <label 
-            className="flex items-center gap-1.5 cursor-pointer hover:text-gold-light transition-colors"
-            title="Ẩn/Hiện tên của các vòng trải bài ở mép trái các đường phân làn"
-          >
-            <input
-              type="checkbox"
-              checked={showLaneLabels}
-              onChange={(e) => setShowLaneLabels(e.target.checked)}
-              className="accent-gold-primary w-3.5 h-3.5 cursor-pointer rounded"
-            />
-            <span>🗺️</span>
-            {showButtonLabels && <span className="ml-1 text-[9px]">HIỆN TÊN VÒNG TRẢI</span>}
-          </label>
+            <span className="w-12 text-right text-[10px] font-sans font-bold text-gold-light">
+              {Math.round(zoom * 100)}%
+            </span>
+          </div>
         </div>
-
-        <div className="flex items-center gap-3 min-w-0">
-          <span 
-            className="text-[10px] font-sans font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap cursor-help"
-            title="Điều chỉnh tỷ lệ hiển thị bàn bài (Zoom)"
-          >
-            {showButtonLabels ? 'Zoom' : '🔎'}
-          </span>
-          <input
-            type="range"
-            min="55"
-            max="300"
-            value={Math.round(zoom * 100)}
-            onChange={(event) => setZoom(Number(event.target.value) / 100)}
-            className="w-full xl:w-48 accent-gold-primary"
-          />
-          <span className="w-12 text-right text-[10px] font-sans font-bold text-gold-light">
-            {Math.round(zoom * 100)}%
-          </span>
-        </div>
-      </div>
+      )}
 
       <div className="flex-1 w-full flex items-stretch overflow-hidden relative">
+        {!showToolbar && (
+          <button
+            type="button"
+            onClick={() => setShowToolbar(true)}
+            className="absolute top-4 left-4 z-50 p-1 rounded-full bg-[#0d0d1a]/85 border border-gold-primary/30 hover:border-gold-light hover:scale-105 active:scale-95 transition-all shadow-[0_0_15px_rgba(244,162,97,0.3)] backdrop-blur-md cursor-pointer group animate-[fadeIn_0.2s_ease-out]"
+            title="Hiện thanh công cụ (Menu)"
+          >
+            <img
+              src="/meo-vang-logo.png"
+              alt="Mèo Vàng Logo"
+              className="w-10 h-10 object-contain rounded-full border border-gold-primary/10 group-hover:border-gold-light transition-all"
+            />
+          </button>
+        )}
         <div className="flex-1 min-w-0 relative h-full">
           <div
             ref={scrollRef}
@@ -598,9 +810,19 @@ export default function FreeTarotWorkspace2D({
                         )}
 
                         {workspaceCard.locked && (
-                          <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-bg-deep border border-gold-primary/40 text-gold-light text-[10px] flex items-center justify-center shadow-lg">
+                          <span className="absolute -top-2.5 -left-2.5 w-6 h-6 rounded-full bg-[#0d0d1a] border border-gold-primary/40 text-gold-light text-[10px] flex items-center justify-center shadow-lg z-40 select-none">
                             🔒
                           </span>
+                        )}
+
+                        {isActive && !workspaceCard.locked && (
+                          <div
+                            onPointerDown={(event) => beginRotateDrag(event, workspaceCard)}
+                            onPointerMove={moveRotateDrag}
+                            onPointerUp={endRotateDrag}
+                            onPointerCancel={endRotateDrag}
+                            className="absolute -top-4 -right-4 w-8 h-8 rounded-full bg-transparent z-40 select-none touch-none"
+                          />
                         )}
                       </div>
                     </div>
