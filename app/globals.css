@@ -204,3 +204,94 @@
   animation: goldDash 2s linear infinite;
 }
 
+/* ─────────────────────────────────────────────
+   GHIBLI 2D ANIMATIONS
+   ───────────────────────────────────────────── */
+
+/* Bánh răng steampunk */
+@keyframes gearSpinClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes gearSpinCounterClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.animate-gear-cw {
+  animation: gearSpinClockwise 20s linear infinite;
+  will-change: transform;
+}
+
+.animate-gear-ccw {
+  animation: gearSpinCounterClockwise 15s linear infinite;
+  will-change: transform;
+}
+
+/* Hiệu ứng đung đưa (Gió thổi/Bài trôi) */
+@keyframes swayEffect {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50% { transform: rotate(2deg) translateY(-5px); }
+}
+
+.animate-sway {
+  animation: swayEffect 4s ease-in-out infinite;
+}
+
+/* Bài trôi trên mặt nước */
+@keyframes waterBobbing {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-5px) rotate(1deg); }
+}
+
+.animate-water-bobbing {
+  animation: waterBobbing 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Cánh hoa anh đào rụng nền */
+@keyframes cherryPetalFall {
+  0% {
+    transform: translate(0, -10px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(120px, 100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-cherry-petal {
+  animation: cherryPetalFall 10s linear infinite;
+}
+
+/* Soot Sprite nháy mắt */
+@keyframes sootSpriteBlink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+.animate-soot-blink {
+  animation: sootSpriteBlink 4s ease-in-out infinite;
+}
+
+/* Sương mù chuyển động */
+@keyframes fogDrift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-fog-drift {
+  background-size: 200% 200%;
+  animation: fogDrift 20s ease infinite;
+}
+
+

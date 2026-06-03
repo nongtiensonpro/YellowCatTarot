@@ -3,13 +3,14 @@
 import React, { useMemo, useRef, useState } from 'react';
 import TarotCard from '@/components/TarotCard';
 import { TarotCard as TarotCardType } from '@/lib/cards-data';
+import { SOUL_MARKS } from '@/lib/soul-marks';
 
 export interface FreeWorkspaceCard {
   id: string;
   card: TarotCardType;
   isReversed: boolean;
   pickOrder: number;
-  round: 1 | 2 | 3;
+  round: number;
   x: number;
   y: number;
   rotation: number;
@@ -27,6 +28,18 @@ interface FreeTarotWorkspace2DProps {
   onUpdateCard: (cardId: string, updates: Partial<FreeWorkspaceCard>) => void;
   onInspectCard: (card: TarotCardType) => void;
   onAutoArrange: () => void;
+  soulMarkIndexes?: Record<number, number>; // Maps round number (1, 2, 3) to soulMarkIndex
+  roundNames?: Record<number, string>; // Maps round number to custom name
+  fullScreen?: boolean;
+  onToggleFullScreen?: () => void;
+  showRoundSettings?: boolean;
+  onToggleRoundSettings?: () => void;
+  onClearBoard?: () => void;
+  onCopyResults?: () => void;
+  showJournal?: boolean;
+  onToggleJournal?: () => void;
+  onToggleCardControlPanel?: () => void;
+  hasCards?: boolean;
 }
 
 const BOARD_WIDTH = 1800;
@@ -35,24 +48,6 @@ const CARD_WIDTH = 120;
 const CARD_HEIGHT = 208;
 const MOBILE_CARD_WIDTH = 100;
 const MOBILE_CARD_HEIGHT = 173;
-
-const roundStyles: Record<1 | 2 | 3, { label: string; badge: string; glow: string }> = {
-  1: {
-    label: 'Vòng 1',
-    badge: 'bg-gold-primary/15 border-gold-primary/35 text-gold-light',
-    glow: 'shadow-[0_0_18px_rgba(244,162,97,0.20)]',
-  },
-  2: {
-    label: 'Vòng 2',
-    badge: 'bg-[#2a9d8f]/15 border-[#2a9d8f]/35 text-[#48cae4]',
-    glow: 'shadow-[0_0_18px_rgba(72,202,228,0.16)]',
-  },
-  3: {
-    label: 'Vòng 3',
-    badge: 'bg-[#e76f51]/15 border-[#e76f51]/35 text-[#f4a261]',
-    glow: 'shadow-[0_0_18px_rgba(231,111,81,0.16)]',
-  },
-};
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
@@ -66,7 +61,48 @@ export default function FreeTarotWorkspace2D({
   onUpdateCard,
   onInspectCard,
   onAutoArrange,
+  soulMarkIndexes,
+  roundNames,
+  fullScreen = false,
+  onToggleFullScreen,
+  showRoundSettings = false,
+  onToggleRoundSettings,
+  onClearBoard,
+  onCopyResults,
+  showJournal = false,
+  onToggleJournal,
+  onToggleCardControlPanel,
+  hasCards = false,
 }: FreeTarotWorkspace2DProps) {
+  // Helper to dynamically look up round styles and names using Ghibli Soul Marks
+  const getRoundStyle = (roundNumber: number) => {
+    const soulMarkIdx = soulMarkIndexes ? soulMarkIndexes[roundNumber] : (roundNumber - 1) % 8;
+    const mark = SOUL_MARKS[soulMarkIdx] || SOUL_MARKS[0];
+    const customName = roundNames ? roundNames[roundNumber] : `Vòng ${roundNumber}`;
+    return {
+      label: `${customName} · ${mark.icon} ${mark.name}`,
+      badge: `${mark.bgClass} ${mark.borderClass} ${mark.textClass}`,
+      glow: `shadow-[0_0_18px_rgba(${parseInt(mark.color.slice(1, 3), 16)},${parseInt(mark.color.slice(3, 5), 16)},${parseInt(mark.color.slice(5, 7), 16)},0.28)]`,
+      textColor: mark.color,
+    };
+  };
+
+  const roundNumbers = useMemo(() => {
+    const keys = Object.keys(soulMarkIndexes || {}).map(Number);
+    if (keys.length === 0) return [1, 2, 3];
+    return keys.sort((a, b) => a - b);
+  }, [soulMarkIndexes]);
+
+  const maxRound = useMemo(() => {
+    return Math.max(3, ...roundNumbers, ...cards.map(c => c.round));
+  }, [roundNumbers, cards]);
+
+  const boardHeight = maxRound * 320 + 220;
+
+  const [showCardLabels, setShowCardLabels] = useState(false);
+  const [showLaneLabels, setShowLaneLabels] = useState(false);
+  const [showButtonLabels, setShowButtonLabels] = useState(false);
+
   const boardRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
@@ -104,14 +140,14 @@ export default function FreeTarotWorkspace2D({
 
   const boardScaleStyle = {
     width: `${BOARD_WIDTH}px`,
-    height: `${BOARD_HEIGHT}px`,
+    height: `${boardHeight}px`,
     transform: `scale(${zoom})`,
     transformOrigin: 'top left',
   };
 
   const scrollContentStyle = {
     width: `${BOARD_WIDTH * zoom}px`,
-    height: `${BOARD_HEIGHT * zoom}px`,
+    height: `${boardHeight * zoom}px`,
   };
 
   const beginCardDrag = (event: React.PointerEvent<HTMLDivElement>, card: FreeWorkspaceCard) => {
@@ -153,7 +189,7 @@ export default function FreeTarotWorkspace2D({
 
     onUpdateCard(drag.cardId, {
       x: clamp(drag.startX + dx, 12, BOARD_WIDTH - cardWidth - 12),
-      y: clamp(drag.startY + dy, 12, BOARD_HEIGHT - cardHeight - 48),
+      y: clamp(drag.startY + dy, 12, boardHeight - cardHeight - 48),
     });
   };
 
@@ -229,63 +265,213 @@ export default function FreeTarotWorkspace2D({
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between bg-white/[0.025] border border-white/[0.06] rounded-2xl p-3">
+    <div className="flex-1 w-full flex flex-col h-full overflow-hidden bg-[#070711]">
+      <div className="flex-shrink-0 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between bg-[#0d0d1a]/60 border-b border-white/10 p-3 select-none">
         <div className="flex flex-wrap items-center gap-2">
+          {/* Back button */}
+          <button
+            type="button"
+            onClick={() => window.location.href = '/reading'}
+            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-red-500/40 text-text-secondary hover:text-red-400 text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+            title="Quay lại danh mục trải bài (Thoát)"
+          >
+            <span>🚪</span>
+            {showButtonLabels && <span className="ml-1 text-[9px]">Thoát</span>}
+          </button>
+
+          {hasCards && onClearBoard && (
+            <button
+              type="button"
+              onClick={onClearBoard}
+              className="px-3 py-2 rounded-xl bg-red-950/20 border border-red-500/20 hover:border-red-500/50 hover:bg-red-950/40 text-red-400 text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+              title="Dọn sạch toàn bộ bàn trải bài"
+            >
+              <span>🗑️</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Dọn Bàn</span>}
+            </button>
+          )}
+
+          {hasCards && onCopyResults && (
+            <button
+              type="button"
+              onClick={onCopyResults}
+              className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary hover:bg-white/10 text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1"
+              title="Sao chép toàn bộ kết quả phiên trải bài vào Clipboard"
+            >
+              <span>📋</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Sao Chép</span>}
+            </button>
+          )}
+
+          {onToggleCardControlPanel && (
+            <button
+              type="button"
+              onClick={onToggleCardControlPanel}
+              className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
+                showCardControlPanel
+                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                  : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
+              }`}
+              title={showCardControlPanel ? 'Ẩn bảng điều khiển lá bài đang chọn' : 'Hiện bảng điều khiển lá bài đang chọn'}
+            >
+              <span>🎴</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Bảng Lá</span>}
+            </button>
+          )}
+
+          {onToggleJournal && (
+            <button
+              type="button"
+              onClick={onToggleJournal}
+              className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
+                showJournal
+                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                  : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
+              }`}
+              title={showJournal ? 'Ẩn thanh Nhật Ký & Hội Thoại bên phải' : 'Hiện thanh Nhật Ký & Hội Thoại bên phải'}
+            >
+              <span>📝</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Nhật Ký</span>}
+            </button>
+          )}
+
+          {onToggleRoundSettings && (
+            <button
+              type="button"
+              onClick={onToggleRoundSettings}
+              className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-lg ${
+                showRoundSettings
+                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                  : 'bg-white/5 border-white/10 hover:border-gold-primary/45 text-text-secondary hover:text-gold-light'
+              }`}
+              title="Thiết lập các vòng và chế độ rút bài"
+            >
+              <span>⚙️</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Thiết Lập Vòng</span>}
+            </button>
+          )}
+
+          {/* Separator line */}
+          <span className="w-px h-5 bg-white/10 mx-1 hidden sm:inline" />
+
+          {/* Canvas layout controls */}
           <button
             onClick={onAutoArrange}
-            className="px-3 py-2 rounded-xl bg-gold-primary/15 border border-gold-primary/30 hover:border-gold-light text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all"
+            className="px-3 py-2 rounded-xl bg-gold-primary/15 border border-gold-primary/30 hover:border-gold-light text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1"
+            title="Sắp xếp tự động các lá bài về vị trí ban đầu của từng vòng"
           >
-            Sắp Xếp Lại
+            <span>🧩</span>
+            {showButtonLabels && <span className="ml-1 text-[9px]">Sắp Xếp Lại</span>}
           </button>
+          
           <button
             onClick={() => activeCard && onUpdateCard(activeCard.id, { locked: !activeCard.locked })}
             disabled={!activeCard}
-            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
+            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none flex items-center gap-1"
+            title={activeCard?.locked ? "Mở khóa vị trí lá bài đang chọn để tự do di chuyển" : "Khóa vị trí lá bài đang chọn chống di chuyển nhầm"}
           >
-            {activeCard?.locked ? 'Mở Khóa Lá' : 'Khóa Lá'}
+            <span>{activeCard?.locked ? '🔓' : '🔒'}</span>
+            {showButtonLabels && <span className="ml-1 text-[9px]">{activeCard?.locked ? 'Mở Khóa' : 'Khóa Lá'}</span>}
           </button>
+          
           <button
             onClick={() => activeCard && onUpdateCard(activeCard.id, { isReversed: !activeCard.isReversed })}
             disabled={!activeCard}
-            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
+            className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-text-secondary hover:text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none flex items-center gap-1"
+            title="Đảo chiều lá bài đang chọn (Xuôi ✦ / Ngược ↩)"
           >
-            Đảo Xuôi/Ngược
+            <span>🔄</span>
+            {showButtonLabels && <span className="ml-1 text-[9px]">Đảo Chiều</span>}
           </button>
+          
           {activeCard && (
             <button
               onClick={() => onInspectCard(activeCard.card)}
-              className="px-3 py-2 rounded-xl bg-gold-primary/18 border border-gold-primary/45 hover:bg-gold-primary hover:text-bg-deep text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all shadow-[0_0_10px_rgba(244,162,97,0.12)]"
+              className="px-3 py-2 rounded-xl bg-gold-primary/18 border border-gold-primary/45 hover:bg-gold-primary hover:text-bg-deep text-gold-light text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all shadow-[0_0_10px_rgba(244,162,97,0.12)] flex items-center gap-1"
+              title="Xem chi tiết ý nghĩa và luận giải của lá bài đang chọn"
             >
-              Xem Lá Đang Chọn
+              <span>🔍</span>
+              {showButtonLabels && <span className="ml-1 text-[9px]">Chi Tiết Lá</span>}
             </button>
           )}
+
           <button
             onClick={() => rotateActive(-15)}
             disabled={!activeCard || activeCard.locked}
             className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gold-light text-sm cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
-            title="Xoay trái"
+            title="Xoay trái lá bài"
           >
             ↺
           </button>
+          
           <button
             onClick={() => rotateActive(15)}
             disabled={!activeCard || activeCard.locked}
             className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/40 text-gold-light text-sm cursor-pointer transition-all disabled:opacity-35 disabled:pointer-events-none"
-            title="Xoay phải"
+            title="Xoay phải lá bài"
           >
             ↻
           </button>
+
+          {/* Separator line */}
+          <span className="w-px h-5 bg-white/10 mx-1 hidden sm:inline" />
+
+          {/* Toggle Button Labels Button */}
+          <button
+            type="button"
+            onClick={() => setShowButtonLabels(!showButtonLabels)}
+            className={`px-3 py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 flex items-center gap-1 ${
+              showButtonLabels
+                ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
+                : 'bg-white/5 border-white/10 text-text-secondary hover:border-gold-primary/45'
+            }`}
+            title={showButtonLabels ? 'Ẩn chữ của các nút trên menu (Chỉ hiện Icon)' : 'Hiện chữ đầy đủ của các nút trên menu'}
+          >
+            <span>🏷️</span>
+            <span className="ml-1 text-[9px]">{showButtonLabels ? 'Ẩn Chữ' : 'Hiện Chữ'}</span>
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 text-[10px] font-sans font-bold text-text-secondary select-none">
+          <label 
+            className="flex items-center gap-1.5 cursor-pointer hover:text-gold-light transition-colors"
+            title="Ẩn/Hiện nhãn tên và số vòng trực tiếp dưới mỗi lá bài trên bàn"
+          >
+            <input
+              type="checkbox"
+              checked={showCardLabels}
+              onChange={(e) => setShowCardLabels(e.target.checked)}
+              className="accent-gold-primary w-3.5 h-3.5 cursor-pointer rounded"
+            />
+            <span>🔤</span>
+            {showButtonLabels && <span className="ml-1 text-[9px]">HIỆN TÊN & VÒNG LÁ BÀI</span>}
+          </label>
+          <label 
+            className="flex items-center gap-1.5 cursor-pointer hover:text-gold-light transition-colors"
+            title="Ẩn/Hiện tên của các vòng trải bài ở mép trái các đường phân làn"
+          >
+            <input
+              type="checkbox"
+              checked={showLaneLabels}
+              onChange={(e) => setShowLaneLabels(e.target.checked)}
+              className="accent-gold-primary w-3.5 h-3.5 cursor-pointer rounded"
+            />
+            <span>🗺️</span>
+            {showButtonLabels && <span className="ml-1 text-[9px]">HIỆN TÊN VÒNG TRẢI</span>}
+          </label>
         </div>
 
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-[10px] font-sans font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap">
-            Zoom
+          <span 
+            className="text-[10px] font-sans font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap cursor-help"
+            title="Điều chỉnh tỷ lệ hiển thị bàn bài (Zoom)"
+          >
+            {showButtonLabels ? 'Zoom' : '🔎'}
           </span>
           <input
             type="range"
             min="55"
-            max="125"
+            max="300"
             value={Math.round(zoom * 100)}
             onChange={(event) => setZoom(Number(event.target.value) / 100)}
             className="w-full xl:w-48 accent-gold-primary"
@@ -296,11 +482,11 @@ export default function FreeTarotWorkspace2D({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        <div className={`${showCardControlPanel ? 'xl:col-span-9' : 'xl:col-span-12'} min-h-[620px]`}>
+      <div className="flex-1 w-full flex items-stretch overflow-hidden relative">
+        <div className="flex-1 min-w-0 relative h-full">
           <div
             ref={scrollRef}
-            className={`relative h-[68vh] min-h-[620px] overflow-auto rounded-2xl border border-white/[0.06] bg-[#070711] shadow-2xl scrollbar-thin ${
+            className={`relative w-full h-full overflow-auto scrollbar-thin ${
               isPanning ? 'cursor-grabbing' : 'cursor-grab'
             }`}
           >
@@ -331,17 +517,19 @@ export default function FreeTarotWorkspace2D({
                   }}
                 />
 
-                {([1, 2, 3] as const).map((round) => {
-                  const style = roundStyles[round];
+                {roundNumbers.map((round) => {
+                  const style = getRoundStyle(round);
                   return (
                     <div
                       key={round}
                       className="absolute left-10 right-10 border-t border-dashed border-white/10"
                       style={{ top: `${210 + (round - 1) * 320}px` }}
                     >
-                      <span className={`absolute -top-3 left-0 px-2 py-1 rounded-lg border text-[10px] font-sans font-bold uppercase tracking-widest ${style.badge}`}>
-                        {style.label}
-                      </span>
+                      {showLaneLabels && (
+                        <span className={`absolute -top-3 left-0 px-2 py-1 rounded-lg border text-[10px] font-sans font-bold uppercase tracking-widest ${style.badge}`}>
+                          {style.label}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
@@ -360,7 +548,7 @@ export default function FreeTarotWorkspace2D({
 
                 {sortedCards.map((workspaceCard) => {
                   const isActive = workspaceCard.id === activeCardId;
-                  const style = roundStyles[workspaceCard.round];
+                  const style = getRoundStyle(workspaceCard.round);
                   return (
                     <div
                       key={workspaceCard.id}
@@ -398,14 +586,16 @@ export default function FreeTarotWorkspace2D({
                           />
                         </div>
 
-                        <div className="w-[128px] flex flex-col items-center gap-0.5 pointer-events-none">
-                          <span className={`max-w-full px-1.5 py-0.5 rounded border text-[8px] font-sans font-bold uppercase tracking-wider truncate ${style.badge}`}>
-                            {workspaceCard.label || `${style.label} · #${workspaceCard.pickOrder}`}
-                          </span>
-                          <span className="max-w-full truncate text-[10px] text-white font-lora drop-shadow">
-                            {workspaceCard.card.nameVi} {workspaceCard.isReversed ? '↩' : '✦'}
-                          </span>
-                        </div>
+                        {showCardLabels && (
+                          <div className="w-[128px] flex flex-col items-center gap-0.5 pointer-events-none">
+                            <span className={`max-w-full px-1.5 py-0.5 rounded border text-[8px] font-sans font-bold uppercase tracking-wider truncate ${style.badge}`}>
+                              {workspaceCard.label || `${style.label} · #${workspaceCard.pickOrder}`}
+                            </span>
+                            <span className="max-w-full truncate text-[10px] text-white font-lora drop-shadow">
+                              {workspaceCard.card.nameVi} {workspaceCard.isReversed ? '↩' : '✦'}
+                            </span>
+                          </div>
+                        )}
 
                         {workspaceCard.locked && (
                           <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-bg-deep border border-gold-primary/40 text-gold-light text-[10px] flex items-center justify-center shadow-lg">
@@ -422,7 +612,7 @@ export default function FreeTarotWorkspace2D({
         </div>
 
         {showCardControlPanel && (
-          <aside className="xl:col-span-3 min-h-[620px] rounded-2xl border border-white/[0.06] bg-bg-surface/25 p-4 flex flex-col gap-4 shadow-2xl">
+          <aside className="w-full sm:w-[320px] flex-shrink-0 border-l border-white/10 bg-[#0d0d1a]/95 p-4 flex flex-col gap-4 shadow-2xl overflow-y-auto scrollbar-thin h-full z-20">
             <div className="border-b border-white/10 pb-3">
               <h3 className="font-cinzel text-xs font-bold text-gold-light uppercase tracking-wider">
                 Bảng Điều Khiển Lá
@@ -444,7 +634,7 @@ export default function FreeTarotWorkspace2D({
                         {activeCard.card.nameEn} · {activeCard.isReversed ? 'Chiều ngược' : 'Chiều xuôi'}
                       </p>
                     </div>
-                    <span className={`px-2 py-0.5 rounded border text-[8px] font-sans font-bold uppercase tracking-wider ${roundStyles[activeCard.round].badge}`}>
+                    <span className={`px-2 py-0.5 rounded border text-[8px] font-sans font-bold uppercase tracking-wider ${getRoundStyle(activeCard.round).badge}`}>
                       V{activeCard.round}
                     </span>
                   </div>

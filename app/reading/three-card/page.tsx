@@ -26,8 +26,9 @@ const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
 type FlowStep = 'INPUT' | 'SHUFFLING' | 'PICKING' | 'RESULT' | 'INTERPRETING' | 'COMPLETE';
 
 export default function ThreeCardReading() {
-  const { apiKey } = useApiKey();
+  const { apiKey, shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
   const spreadType = spreadTypes['three-card'];
+  const [weatherEffect, setWeatherEffect] = useState<'wind' | 'sun' | 'fog' | null>(null);
 
   // React state
   const [step, setStep] = useState<FlowStep>('INPUT');
@@ -110,9 +111,23 @@ export default function ThreeCardReading() {
     const randomResults = getRandomCards(3);
     setPreparedCards(randomResults);
 
-    setTimeout(() => {
+    if (shuffleTheme === 'wheel-of-fate') {
+      const weathers = ['wind', 'sun', 'fog'] as const;
+      const rw = weathers[Math.floor(Math.random() * weathers.length)];
+      setWeatherEffect(rw);
+    } else {
+      setWeatherEffect(null);
+    }
+
+    const finishShuffle = () => {
       setStep('PICKING');
-    }, 1800);
+    };
+
+    if (shuffleTheme !== 'soot-sprite') {
+      setTimeout(finishShuffle, reduceMotion ? 100 : 1800);
+    } else {
+      (window as any).finishThreeShuffle = finishShuffle;
+    }
   };
 
   // Chọn từng lá bài thủ công
@@ -140,9 +155,24 @@ export default function ThreeCardReading() {
       setStep('RESULT');
     } else {
       setStep('SHUFFLING');
-      setTimeout(() => {
+
+      if (shuffleTheme === 'wheel-of-fate') {
+        const weathers = ['wind', 'sun', 'fog'] as const;
+        const rw = weathers[Math.floor(Math.random() * weathers.length)];
+        setWeatherEffect(rw);
+      } else {
+        setWeatherEffect(null);
+      }
+
+      const finishShuffle = () => {
         setStep('PICKING');
-      }, 1500);
+      };
+
+      if (shuffleTheme !== 'soot-sprite') {
+        setTimeout(finishShuffle, reduceMotion ? 100 : 1500);
+      } else {
+        (window as any).finishThreeShuffle = finishShuffle;
+      }
     }
   };
 
@@ -323,6 +353,15 @@ export default function ThreeCardReading() {
                   onSelectCard={handleSelectCard}
                   isShuffling={step === 'SHUFFLING'}
                   isDeckSpread={step === 'PICKING'}
+                  shuffleTheme={shuffleTheme}
+                  pickingTheme={pickingTheme}
+                  weatherEffect={weatherEffect}
+                  reduceMotion={reduceMotion}
+                  onStopShuffle={() => {
+                    if ((window as any).finishThreeShuffle) {
+                      (window as any).finishThreeShuffle();
+                    }
+                  }}
                 />
               </div>
             )}

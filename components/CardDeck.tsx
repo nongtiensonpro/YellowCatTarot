@@ -3,12 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import CardBack from './CardBack';
+import WheelOfFateShuffle from './shuffle-themes/WheelOfFateShuffle';
+import SootSpriteShuffle from './shuffle-themes/SootSpriteShuffle';
+import WeatherOverlay from './shuffle-themes/WeatherOverlay';
+import ReflectingPoolPicker from './picking-themes/ReflectingPoolPicker';
+import FallingPetalsPicker from './picking-themes/FallingPetalsPicker';
+import { useApiKey } from './ApiKeyProvider';
+import { playGhibliSFX } from '@/lib/ghibli-audio';
 
 interface CardDeckProps {
   cardsCount?: number;
   onSelectCard: (index: number) => void;
   isShuffling: boolean;
   isDeckSpread: boolean;
+  shuffleTheme?: 'classic' | 'wheel-of-fate' | 'soot-sprite';
+  pickingTheme?: 'classic' | 'reflecting-pool' | 'falling-petals';
+  weatherEffect?: 'wind' | 'sun' | 'fog' | null;
+  reduceMotion?: boolean;
+  onStopShuffle?: () => void;
 }
 
 export default function CardDeck({
@@ -16,7 +28,13 @@ export default function CardDeck({
   onSelectCard,
   isShuffling,
   isDeckSpread,
+  shuffleTheme = 'classic',
+  pickingTheme = 'classic',
+  weatherEffect = null,
+  reduceMotion = false,
+  onStopShuffle,
 }: CardDeckProps) {
+  const { enableSound } = useApiKey();
   const [deck, setDeck] = useState<number[]>([]);
   const [screenWidth, setScreenWidth] = useState(768); // Giá trị mặc định an toàn cho SSR
 
@@ -145,11 +163,55 @@ export default function CardDeck({
     };
   };
 
+  // Render custom shuffle themes when shuffling
+  if (isShuffling && shuffleTheme !== 'classic') {
+    if (shuffleTheme === 'wheel-of-fate') {
+      return (
+        <div style={{ height: `${dynamicHeight}px` }} className="relative w-full overflow-visible">
+          <WheelOfFateShuffle reduceMotion={reduceMotion} />
+        </div>
+      );
+    }
+    if (shuffleTheme === 'soot-sprite') {
+      return (
+        <div style={{ height: `${dynamicHeight}px` }} className="relative w-full overflow-visible">
+          <SootSpriteShuffle onStop={onStopShuffle} reduceMotion={reduceMotion} />
+        </div>
+      );
+    }
+  }
+
+  // Render custom picking themes when spread
+  if (isDeckSpread && pickingTheme !== 'classic') {
+    if (pickingTheme === 'reflecting-pool') {
+      return (
+        <ReflectingPoolPicker
+          cardsCount={cardsCount}
+          onSelectCard={onSelectCard}
+          reduceMotion={reduceMotion}
+        />
+      );
+    }
+    if (pickingTheme === 'falling-petals') {
+      return (
+        <FallingPetalsPicker
+          cardsCount={cardsCount}
+          onSelectCard={onSelectCard}
+          reduceMotion={reduceMotion}
+        />
+      );
+    }
+  }
+
   return (
     <div
       className="relative w-full flex items-center justify-center select-none overflow-visible"
       style={{ height: `${dynamicHeight}px` }}
     >
+      {weatherEffect && (
+        <WeatherOverlay weather={weatherEffect} reduceMotion={reduceMotion} />
+      )}
+
       {/* Neo ở chính giữa khung chứa theo cả chiều dọc và chiều ngang */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center overflow-visible">
         {deck.map((id, index) => {
@@ -172,6 +234,7 @@ export default function CardDeck({
               }
               onClick={() => {
                 if (isDeckSpread && !isShuffling) {
+                  playGhibliSFX('card-flip', enableSound);
                   onSelectCard(index);
                 }
               }}

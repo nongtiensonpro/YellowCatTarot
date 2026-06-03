@@ -39,3 +39,7 @@
  GET /reading/free 200 in 142ms (next.js: 89ms, application-code: 53ms)
 ✓ Compiled in 56ms
  GET /reading/free 200 in 120ms (next.js: 82ms, application-code: 38ms)
+ GET /reading 200 in 120ms (next.js: 76ms, application-code: 44ms)
+ GET /reading/free 200 in 16ms (next.js: 2ms, application-code: 14ms)
+ GET /reading/free 200 in 233ms (next.js: 3ms, application-code: 230ms)
+ GET /reading/free 200 in 48ms (next.js: 2ms, application-code: 45ms)

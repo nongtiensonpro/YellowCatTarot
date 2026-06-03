@@ -15,6 +15,9 @@ import CardDeck from '@/components/CardDeck';
 import CardInspector from '@/components/CardInspector';
 import FreeTarotWorkspace2D, { FreeWorkspaceCard } from '@/components/FreeTarotWorkspace2D';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SOUL_MARKS } from '@/lib/soul-marks';
+import { TierRound, createInitialRound } from '@/lib/multi-tier-deck';
+import { useApiKey } from '@/components/ApiKeyProvider';
 
 type FlowStep = 'SETUP' | 'SHUFFLING' | 'PICKING' | 'RESULT';
 
@@ -44,7 +47,7 @@ interface SavedFreeSession {
 
 const FREE_SESSION_STORAGE_KEY = 'tarot_free_unlimited_session';
 
-function getInitialCardPlacement(round: 1 | 2 | 3, pickOrder: number, zIndex: number) {
+function getInitialCardPlacement(round: number, pickOrder: number, zIndex: number) {
   const rowY = 82 + (round - 1) * 320;
   const column = (pickOrder - 1) % 10;
   const rowOffset = Math.floor((pickOrder - 1) / 10);
@@ -57,28 +60,130 @@ function getInitialCardPlacement(round: 1 | 2 | 3, pickOrder: number, zIndex: nu
   };
 }
 
+function findNonOverlappingPlacement(
+  round: number,
+  pickOrder: number,
+  zIndex: number,
+  existingCards: FreeWorkspaceCard[]
+) {
+  const placement = getInitialCardPlacement(round, pickOrder, zIndex);
+  
+  const thresholdX = 140; // horizontal separation
+  const thresholdY = 245; // vertical separation
+  
+  let attempts = 0;
+  const maxAttempts = 100;
+  
+  while (attempts < maxAttempts) {
+    let hasOverlap = false;
+    for (const card of existingCards) {
+      const dx = Math.abs(card.x - placement.x);
+      const dy = Math.abs(card.y - placement.y);
+      if (dx < thresholdX && dy < thresholdY) {
+        hasOverlap = true;
+        break;
+      }
+    }
+    
+    if (!hasOverlap) {
+      break;
+    }
+    
+    // Shift position: try shifting horizontally to the right
+    placement.x += 155;
+    
+    // If it goes beyond the BOARD_WIDTH boundary, wrap it back and shift down
+    if (placement.x > 1800 - 150) {
+      placement.x = 120;
+      placement.y += 100; // shift down
+    }
+    
+    attempts++;
+  }
+  
+  return placement;
+}
+
 export default function FreeReadingPage() {
   const { startCollecting, stopCollecting } = useEntropyCollector();
+  const { shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
   const hasLoadedSession = useRef(false);
   const idCounterRef = useRef(0);
 
   // Page States
-  const [currentRound, setCurrentRound] = useState<1 | 2 | 3>(1);
+  const [currentRound, setCurrentRound] = useState<number>(1);
+  const [hideTopControls, setHideTopControls] = useState<boolean>(true);
   const [step, setStep] = useState<FlowStep>('SETUP');
   const [cardsToPickThisRound, setCardsToPickThisRound] = useState<number>(3);
+  const [weatherEffect, setWeatherEffect] = useState<'wind' | 'sun' | 'fog' | null>(null);
 
   // Toggle state for session side panel
   const [showJournal, setShowJournal] = useState<boolean>(false);
   const [showCardControlPanel, setShowCardControlPanel] = useState<boolean>(false);
+  const [showRoundSettings, setShowRoundSettings] = useState<boolean>(false);
 
-  // 3-Round Cards storage
-  const [round1Cards, setRound1Cards] = useState<FreeDrawnCard[]>([]);
-  const [round2Cards, setRound2Cards] = useState<FreeDrawnCard[]>([]);
-  const [round3Cards, setRound3Cards] = useState<FreeDrawnCard[]>([]);
+  // Dynamic Ghibli roundsData storage
+  const [roundsData, setRoundsData] = useState<TierRound[]>([
+    createInitialRound(1, 0), // Round 1: Rừng Xanh
+    createInitialRound(2, 1), // Round 2: Nắng Ấm
+    createInitialRound(3, 2), // Round 3: Bầu Trời
+  ]);
+
   const allDrawnCards = useMemo(
-    () => [...round1Cards, ...round2Cards, ...round3Cards],
-    [round1Cards, round2Cards, round3Cards]
+    () => roundsData.flatMap((r) => r.cards),
+    [roundsData]
   );
+
+  const handleCreateNewRound = () => {
+    const nextRoundNumber = roundsData.length > 0
+      ? Math.max(...roundsData.map(r => r.roundNumber)) + 1
+      : 1;
+    const newRound: TierRound = {
+      roundNumber: nextRoundNumber,
+      roundName: `Vòng ${nextRoundNumber}`,
+      soulMarkIndex: (nextRoundNumber - 1) % 8,
+      cards: [],
+      deckMode: 'fresh',
+      maxCards: 3,
+    };
+    setRoundsData((prev) => [...prev, newRound]);
+    setCurrentRound(nextRoundNumber);
+    setCardsToPickThisRound(3);
+  };
+
+  const handleDeleteRound = (roundNum: number) => {
+    if (confirm(`Quý nhân có chắc chắn muốn xóa Vòng ${roundNum} và toàn bộ lá bài trong vòng này không?`)) {
+      const remaining = roundsData.filter((r) => r.roundNumber !== roundNum);
+      if (remaining.length > 0) {
+        setRoundsData(remaining);
+        setCurrentRound(remaining[0].roundNumber);
+        setCardsToPickThisRound(remaining[0].maxCards);
+      } else {
+        const fallback = createInitialRound(1, 0);
+        setRoundsData([fallback]);
+        setCurrentRound(1);
+        setCardsToPickThisRound(3);
+      }
+      setActiveCardId(null);
+    }
+  };
+
+  const soulMarkIndexesMap = useMemo(() => {
+    const map: Record<number, number> = {};
+    roundsData.forEach((r) => {
+      map[r.roundNumber] = r.soulMarkIndex;
+    });
+    return map;
+  }, [roundsData]);
+
+  const roundNamesMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    roundsData.forEach((r) => {
+      map[r.roundNumber] = r.roundName;
+    });
+    return map;
+  }, [roundsData]);
+  
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   // Picker states
@@ -104,9 +209,9 @@ export default function FreeReadingPage() {
         const saved = sessionStorage.getItem(FREE_SESSION_STORAGE_KEY);
         if (saved) {
           try {
-            const parsed = JSON.parse(saved) as SavedFreeSession;
-            const hydratedCards = parsed.cards
-              .map((savedCard) => {
+            const parsed = JSON.parse(saved) as any;
+            const hydratedCards = (parsed.cards || [])
+              .map((savedCard: any) => {
                 const card = getCardById(savedCard.cardId);
                 if (!card) return null;
                 return {
@@ -126,15 +231,37 @@ export default function FreeReadingPage() {
               })
               .filter(Boolean) as FreeDrawnCard[];
 
-            setRound1Cards(hydratedCards.filter((card) => card.round === 1));
-            setRound2Cards(hydratedCards.filter((card) => card.round === 2));
-            setRound3Cards(hydratedCards.filter((card) => card.round === 3));
+            let loadedRounds: TierRound[] = [];
+            if (parsed.roundsConfig && Array.isArray(parsed.roundsConfig)) {
+              loadedRounds = parsed.roundsConfig.map((rConf: any) => ({
+                roundNumber: rConf.roundNumber,
+                roundName: rConf.roundName,
+                soulMarkIndex: rConf.soulMarkIndex,
+                deckMode: rConf.deckMode || 'fresh',
+                maxCards: rConf.maxCards || 3,
+                cards: hydratedCards.filter((card) => card.round === rConf.roundNumber),
+              }));
+            } else {
+              loadedRounds = [1, 2, 3].map((rNum) => {
+                const rIdx = rNum - 1;
+                return {
+                  roundNumber: rNum,
+                  roundName: parsed.roundNames?.[rNum] || `Vòng ${rNum}`,
+                  soulMarkIndex: parsed.soulMarkIndexes?.[rNum] !== undefined ? parsed.soulMarkIndexes[rNum] : rIdx,
+                  cards: hydratedCards.filter((card) => card.round === rNum),
+                  deckMode: parsed.deckModes?.[rNum] || (rNum === 1 ? 'fresh' : 'continue'),
+                  maxCards: parsed.maxCardsList?.[rNum] || 3,
+                };
+              });
+            }
+
+            setRoundsData(loadedRounds);
             setCurrentRound(parsed.currentRound || 1);
             setCardsToPickThisRound(parsed.cardsToPickThisRound || 3);
             setJournalNotes(parsed.journalNotes || '');
             setConversation(parsed.conversation || []);
-            setStep(hydratedCards.length > 0 ? 'RESULT' : 'SETUP');
-            idCounterRef.current = hydratedCards.length + parsed.conversation.length;
+            setStep('SETUP');
+            idCounterRef.current = hydratedCards.length + (parsed.conversation || []).length;
           } catch (err) {
             console.error('Failed to restore free reading session', err);
           }
@@ -161,17 +288,24 @@ export default function FreeReadingPage() {
       };
     });
 
-    const payload: SavedFreeSession = {
+    const payload = {
       currentRound,
       cardsToPickThisRound,
       cards: cardsToSave,
       journalNotes,
       conversation,
+      roundsConfig: roundsData.map((r) => ({
+        roundNumber: r.roundNumber,
+        roundName: r.roundName,
+        soulMarkIndex: r.soulMarkIndex,
+        deckMode: r.deckMode,
+        maxCards: r.maxCards,
+      })),
     };
 
     sessionStorage.setItem(FREE_SESSION_STORAGE_KEY, JSON.stringify(payload));
     sessionStorage.setItem('tarot_free_journal', journalNotes);
-  }, [allDrawnCards, cardsToPickThisRound, conversation, currentRound, journalNotes]);
+  }, [allDrawnCards, cardsToPickThisRound, conversation, currentRound, journalNotes, roundsData]);
 
   // Save journal to sessionStorage on edit
   const handleJournalChange = (text: string) => {
@@ -181,12 +315,35 @@ export default function FreeReadingPage() {
 
   // SHUFFLE PER ROUND
   const handleStartShuffle = async () => {
+    const curRound = roundsData.find(r => r.roundNumber === currentRound);
+    if (!curRound) return;
+
     setStep('SHUFFLING');
-    setCurrentPickCount(0);
+    setCurrentPickCount(curRound.cards.length);
+
+    // If continue mode, bypass hyperShuffle
+    if (curRound.deckMode === 'continue' && deckState) {
+      setTimeout(() => {
+        const remainingCards = 78 - deckState.drawnCardIds.size;
+        const faceDowns = prepareFaceDownCards(deckState, remainingCards);
+        setFaceDownPositions(faceDowns);
+        setStep('PICKING');
+      }, reduceMotion ? 100 : 600);
+      return;
+    }
+
+    // Fresh shuffle
     startCollecting();
 
-    // Shuffling animation: 1.5s
-    setTimeout(async () => {
+    if (shuffleTheme === 'wheel-of-fate') {
+      const weathers = ['wind', 'sun', 'fog'] as const;
+      const rw = weathers[Math.floor(Math.random() * weathers.length)];
+      setWeatherEffect(rw);
+    } else {
+      setWeatherEffect(null);
+    }
+
+    const finishShuffle = async () => {
       const entropy = stopCollecting();
       const shuffledOrder = await hyperShuffle(entropy.events, entropy.timings);
       const newDeck = createNewDeck(shuffledOrder);
@@ -195,7 +352,13 @@ export default function FreeReadingPage() {
       setDeckState(newDeck);
       setFaceDownPositions(faceDowns);
       setStep('PICKING');
-    }, 1500);
+    };
+
+    if (shuffleTheme !== 'soot-sprite') {
+      setTimeout(finishShuffle, reduceMotion ? 100 : 1500);
+    } else {
+      (window as any).finishFreeShuffle = finishShuffle;
+    }
   };
 
   // SELECT CARD FOR ACTIVE ROUND
@@ -208,9 +371,12 @@ export default function FreeReadingPage() {
 
       if (!cardType) return;
 
-      const newPickCount = currentPickCount + 1;
-      setCurrentPickCount(newPickCount);
-      const placement = getInitialCardPlacement(currentRound, newPickCount, allDrawnCards.length + 1);
+      const activeRoundData = roundsData.find(r => r.roundNumber === currentRound);
+      if (!activeRoundData) return;
+
+      const currentRoundCards = activeRoundData.cards;
+      const newPickCount = currentRoundCards.length + 1;
+      const placement = findNonOverlappingPlacement(currentRound, newPickCount, allDrawnCards.length + 1, allDrawnCards);
 
       const drawnCard: FreeDrawnCard = {
         id: `free-${currentRound}-${drawn.cardId}-${newPickCount}-${++idCounterRef.current}`,
@@ -218,45 +384,39 @@ export default function FreeReadingPage() {
         isReversed: drawn.isReversed,
         pickOrder: newPickCount,
         round: currentRound,
-        label: `Vòng ${currentRound} · Lá ${newPickCount}`,
+        label: `${activeRoundData.roundName} · Lá ${newPickCount}`,
         note: '',
         locked: false,
         ...placement,
       };
       setActiveCardId(drawnCard.id);
 
-      // Store in current round array
-      if (currentRound === 1) {
-        setRound1Cards((prev) => [...prev, drawnCard]);
-      } else if (currentRound === 2) {
-        setRound2Cards((prev) => [...prev, drawnCard]);
-      } else if (currentRound === 3) {
-        setRound3Cards((prev) => [...prev, drawnCard]);
-      }
+      // Store in roundsData
+      setRoundsData((prev) => {
+        return prev.map((round) => {
+          if (round.roundNumber === currentRound) {
+            return {
+              ...round,
+              cards: [...round.cards, drawnCard],
+            };
+          }
+          return round;
+        });
+      });
+
+      setCurrentPickCount(newPickCount);
 
       if (newPickCount >= cardsToPickThisRound) {
-        // Round Pick complete -> transition to results view
-        setStep('RESULT');
+        setStep('SETUP');
       } else {
-        // Next pick
-        const faceDowns = prepareFaceDownCards(deckState, 78 - newPickCount);
+        const remainingCount = activeRoundData.deckMode === 'continue'
+          ? 78 - deckState.drawnCardIds.size
+          : 78 - newPickCount;
+        const faceDowns = prepareFaceDownCards(deckState, remainingCount);
         setFaceDownPositions(faceDowns);
       }
     } catch (err) {
       console.error(err);
-    }
-  };
-
-  // PROGRESS TO NEXT ROUND
-  const handleNextRound = () => {
-    if (currentRound === 1) {
-      setCurrentRound(2);
-      setCardsToPickThisRound(3); // Reset default cards for next round
-      setStep('SETUP');
-    } else if (currentRound === 2) {
-      setCurrentRound(3);
-      setCardsToPickThisRound(3);
-      setStep('SETUP');
     }
   };
 
@@ -267,27 +427,27 @@ export default function FreeReadingPage() {
   };
 
   const handleUpdateWorkspaceCard = (cardId: string, updates: Partial<FreeWorkspaceCard>) => {
-    const update = (cards: FreeDrawnCard[]) =>
-      cards.map((workspaceCard) =>
-        workspaceCard.id === cardId ? { ...workspaceCard, ...updates } : workspaceCard
-      );
-
-    setRound1Cards(update);
-    setRound2Cards(update);
-    setRound3Cards(update);
+    setRoundsData((prev) =>
+      prev.map((round) => ({
+        ...round,
+        cards: round.cards.map((c) =>
+          c.id === cardId ? { ...c, ...updates } : c
+        ),
+      }))
+    );
   };
 
   const handleAutoArrangeWorkspace = () => {
-    const arrangeRound = (cards: FreeDrawnCard[]) =>
-      cards.map((workspaceCard, index) => ({
-        ...workspaceCard,
-        ...getInitialCardPlacement(workspaceCard.round, index + 1, index + 1),
-        pickOrder: index + 1,
-      }));
-
-    setRound1Cards(arrangeRound);
-    setRound2Cards(arrangeRound);
-    setRound3Cards(arrangeRound);
+    setRoundsData((prev) =>
+      prev.map((round) => ({
+        ...round,
+        cards: round.cards.map((c, index) => ({
+          ...c,
+          ...getInitialCardPlacement(c.round, index + 1, index + 1),
+          pickOrder: index + 1,
+        })),
+      }))
+    );
   };
 
   const handleAddConversationMessage = (event: React.FormEvent) => {
@@ -336,9 +496,9 @@ export default function FreeReadingPage() {
     let clipboardText = `🎨 KHÔNG GIAN TRẢI NGHIỆM TAROT TỰ DO\n`;
     clipboardText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     clipboardText += `📅 Thời gian trải bài: ${dateText}\n\n`;
-    clipboardText += formatCardsList('VÒNG 1', round1Cards);
-    clipboardText += formatCardsList('VÒNG 2', round2Cards);
-    clipboardText += formatCardsList('VÒNG 3', round3Cards);
+    roundsData.forEach((r) => {
+      clipboardText += formatCardsList(r.roundName.toUpperCase(), r.cards);
+    });
     clipboardText += `📝 NHẬT KÝ TỔNG HỢP:\n`;
     clipboardText += `${journalNotes.trim() || '(Không ghi chú)'}\n`;
     clipboardText += `\n💬 TRAO ĐỔI TRONG PHIÊN:\n`;
@@ -363,9 +523,12 @@ export default function FreeReadingPage() {
     if (confirm('Quý nhân có chắc chắn muốn dọn sạch bàn trải bài và bắt đầu phiên tự do mới từ Vòng 1 không?')) {
       setCurrentRound(1);
       setStep('SETUP');
-      setRound1Cards([]);
-      setRound2Cards([]);
-      setRound3Cards([]);
+      setRoundsData([
+        createInitialRound(1, 0),
+        createInitialRound(2, 1),
+        createInitialRound(3, 2),
+      ]);
+      setCardsToPickThisRound(3);
       setActiveCardId(null);
       setConversation([]);
       setConversationInput('');
@@ -378,368 +541,463 @@ export default function FreeReadingPage() {
   const activeWorkspaceCard = allDrawnCards.find((card) => card.id === activeCardId) || null;
 
   return (
-    <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-6 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
-      <div className="w-full max-w-7xl flex flex-col gap-5 items-stretch">
-        
-        {/* Header (Minimal, No Golden Cat reference) */}
-        <div className="text-center border-b border-white/5 pb-4 flex flex-col items-center gap-1.5">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
-            <h1 className="font-cinzel text-xl md:text-2xl font-extrabold text-gold-primary tracking-wider drop-shadow-[0_0_8px_var(--color-gold-glow)]">
-              Không Gian Trải Nghiệm Tarot Tự Do
-            </h1>
-            <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-white/5 border border-white/10 text-text-secondary uppercase select-none">
-              Tự Do Không Giới Hạn
-            </span>
-          </div>
-          <p className="font-lora text-[11px] md:text-xs text-text-secondary italic">
-            Không gian mở để tự do rút bài, sắp đặt, kết nối ý nghĩa và ghi lại mọi cảm nhận trong suốt trải nghiệm.
-          </p>
-        </div>
+    <div className="h-screen w-screen bg-[#070711] select-none flex flex-row overflow-hidden relative">
+      <style>{`
+        nav {
+          display: none !important;
+        }
+      `}</style>
 
-        {/* PREMIUM CONTROLS BAR */}
-        <div className="w-full flex flex-wrap items-center justify-between gap-3 bg-white/[0.02] border border-white/[0.05] rounded-2xl p-3 shadow-lg select-none">
-          {/* Status Tracker */}
-          <div className="flex items-center gap-2 font-lora">
-            <span className="w-2.5 h-2.5 rounded-full bg-gold-primary animate-pulse" />
-            <span className="text-[10px] md:text-xs font-sans font-bold text-gold-light uppercase tracking-wider">
-              {round1Cards.length === 0 && round2Cards.length === 0 && round3Cards.length === 0
-                ? 'Đang chuẩn bị...'
-                : step === 'RESULT' && currentRound === 3
-                ? '✓ Đã hoàn tất 3 Vòng'
-                : `Đang trải: Vòng ${currentRound} · Bước ${
-                    step === 'SETUP' ? 'Thiết lập' : step === 'SHUFFLING' ? 'Đang xáo bài' : step === 'PICKING' ? 'Đang nhặt bài' : 'Xem kết quả'
-                  }`}
-            </span>
-          </div>
+      {/* Main Workspace Area (takes remaining width) */}
+      <div className="flex-1 h-full min-w-0 relative flex flex-col">
+        <FreeTarotWorkspace2D
+          cards={allDrawnCards}
+          activeCardId={activeCardId}
+          showCardControlPanel={showCardControlPanel}
+          onSelectCard={setActiveCardId}
+          onUpdateCard={handleUpdateWorkspaceCard}
+          onInspectCard={handleCardInspect}
+          onAutoArrange={handleAutoArrangeWorkspace}
+          soulMarkIndexes={soulMarkIndexesMap}
+          roundNames={roundNamesMap}
+          fullScreen={true}
+          showRoundSettings={showRoundSettings}
+          onToggleRoundSettings={() => setShowRoundSettings(!showRoundSettings)}
+          onClearBoard={handleResetAll}
+          onCopyResults={handleCopyResults}
+          showJournal={showJournal}
+          onToggleJournal={() => setShowJournal(!showJournal)}
+          onToggleCardControlPanel={() => setShowCardControlPanel(!showCardControlPanel)}
+          hasCards={allDrawnCards.length > 0}
+        />
 
-          {/* Action Buttons Dashboard */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Clear Board button */}
-            {(round1Cards.length > 0 || round2Cards.length > 0 || round3Cards.length > 0) && (
-              <button
-                onClick={handleResetAll}
-                className="px-3.5 py-2 text-[10px] font-sans font-bold uppercase tracking-wider rounded-xl bg-red-950/20 border border-red-500/20 hover:border-red-500/50 hover:bg-red-950/40 text-red-400 cursor-pointer transition-all active:scale-95"
-                title="Dọn bàn trải bài"
-              >
-                🗑️ Dọn Bàn
-              </button>
-            )}
-
-            {/* Quick Copy Result button */}
-            {round1Cards.length > 0 && (
-              <button
-                onClick={handleCopyResults}
-                className="px-3.5 py-2 text-[10px] font-sans font-bold uppercase tracking-wider rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary hover:bg-white/10 text-gold-light cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-lg"
-              >
-                {copySuccess ? '✓ Đã Sao Chép' : '📋 Sao Chép Kết Quả'}
-              </button>
-            )}
-
-            <button
-              onClick={() => setShowCardControlPanel(!showCardControlPanel)}
-              className={`px-3.5 py-2 text-[10px] font-sans font-bold uppercase tracking-wider rounded-xl border cursor-pointer transition-all active:scale-95 shadow-lg ${
-                showCardControlPanel
-                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
-                  : 'bg-white/5 border-white/10 hover:border-gold-primary/35 text-text-secondary hover:text-gold-light'
-              }`}
+        {/* ROUND CONFIGURATION SIDEBAR POPUP (SLIDE-OUT FROM RIGHT) */}
+        <AnimatePresence>
+          {showRoundSettings && (
+            <motion.div
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute top-0 right-0 h-full w-full sm:w-[350px] bg-[#0d0d1a]/95 border-l border-gold-primary/20 shadow-2xl z-30 flex flex-col p-5 backdrop-blur-md"
             >
-              {showCardControlPanel ? 'Ẩn Bảng Điều Khiển Lá' : 'Bật Bảng Điều Khiển Lá'}
-            </button>
-
-            {/* Toggle Notepad button */}
-            <button
-              onClick={() => setShowJournal(!showJournal)}
-              className={`px-3.5 py-2 text-[10px] font-sans font-bold uppercase tracking-wider rounded-xl border cursor-pointer transition-all active:scale-95 shadow-lg flex items-center gap-1.5 ${
-                showJournal
-                  ? 'bg-gold-primary/20 border-gold-primary text-gold-light'
-                  : 'bg-white/5 border-gold-primary/25 hover:border-gold-light text-gold-light'
-              }`}
-            >
-              <span>{showJournal ? 'Ẩn Phiên Đọc' : 'Mở Phiên Đọc'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* CORE SCREEN LAYOUT (Splits 12 columns dynamically based on showJournal toggle) */}
-        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch mt-1.5 relative">
-          
-          {/* LEFT: Free Tarot board lanes & Picker Area (Flexible width span) */}
-          <div className={`flex flex-col gap-5 min-h-[500px] transition-all duration-500 ${showJournal ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
-            
-            {/* PICKER OR SETUP MODULE */}
-            <AnimatePresence mode="wait">
-              {/* Setup Pick Card Count */}
-              {step === 'SETUP' && (
-                <motion.div
-                  key="setup"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  className="bg-bg-surface/30 border border-gold-primary/10 rounded-3xl p-5 shadow-2xl flex flex-col gap-4 w-full"
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4 select-none flex-shrink-0">
+                <h3 className="font-cinzel text-xs font-bold text-gold-light uppercase tracking-wider flex items-center gap-1.5">
+                  ⚙️ Cài Đặt Vòng Rút
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowRoundSettings(false)}
+                  className="text-text-secondary hover:text-gold-light transition-colors text-[10px] font-sans uppercase font-bold tracking-wider cursor-pointer"
                 >
-                  <div className="flex items-center gap-2 pb-2 border-b border-white/5">
-                    <span className="w-6 h-6 rounded-full bg-gold-primary/20 border border-gold-primary/30 flex items-center justify-center text-xs text-gold-light font-bold">
-                      {currentRound}
-                    </span>
-                    <h3 className="font-cinzel text-xs font-bold text-gold-light uppercase tracking-wider">
-                      Thiết lập nhặt bài Vòng {currentRound}
-                    </h3>
+                  ❌ Đóng
+                </button>
+              </div>
+
+              {/* Settings Content */}
+              <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-4 scrollbar-thin select-none">
+                
+                {/* Tab selector */}
+                <div className="flex flex-col gap-2 border-b border-white/5 pb-3">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">
+                    Chọn Vòng Trải Bài:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {roundsData.map((round) => {
+                      const isSelected = currentRound === round.roundNumber;
+                      const mark = SOUL_MARKS[round.soulMarkIndex] || SOUL_MARKS[0];
+                      return (
+                        <button
+                          key={round.roundNumber}
+                          type="button"
+                          onClick={() => {
+                            setCurrentRound(round.roundNumber);
+                            setCardsToPickThisRound(round.maxCards);
+                          }}
+                          className="px-2.5 py-1 rounded-xl border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center gap-1 active:scale-95 bg-white/5 border-white/10 text-text-secondary hover:border-white/20"
+                          style={
+                            isSelected
+                              ? {
+                                  borderColor: mark.color,
+                                  color: mark.color,
+                                  boxShadow: `0 0 10px rgba(244,162,97,0.15)`,
+                                  transform: 'scale(1.05)'
+                                }
+                              : {}
+                          }
+                        >
+                          <span>{mark.icon}</span>
+                          <span>{round.roundName}</span>
+                          <span className="px-1 py-0.2 rounded bg-black/30 text-[8px] font-mono">
+                            {round.cards.length}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
 
-                  <div className="flex flex-col gap-3 font-lora">
-                    <label className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold font-sans">
-                      Chọn số lượng lá bài quý nhân muốn nhặt (Giới hạn từ 1 đến 20 lá):
-                    </label>
-                    <div className="flex items-center gap-4">
-                      {/* Range Slider */}
-                      <input
-                        type="range"
-                        min="1"
-                        max="20"
-                        value={cardsToPickThisRound}
-                        onChange={(e) => setCardsToPickThisRound(Number(e.target.value))}
-                        className="flex-1 accent-gold-primary bg-white/10 h-1.5 rounded-lg cursor-pointer"
-                      />
-                      {/* Visual Badge Display */}
-                      <span className="w-12 py-1.5 rounded-xl bg-gold-primary/15 border border-gold-primary/30 text-gold-light text-center font-sans font-bold text-sm shadow-[0_0_8px_rgba(244,162,97,0.1)]">
-                        {cardsToPickThisRound}
-                      </span>
-                    </div>
-                  </div>
-
+                  {/* Add round button */}
                   <button
-                    onClick={handleStartShuffle}
-                    className="w-full mt-1.5 py-3 font-sans font-bold text-xs uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_12px_var(--color-gold-glow)] flex items-center justify-center gap-1.5 active:scale-98"
+                    type="button"
+                    onClick={handleCreateNewRound}
+                    className="w-full mt-1.5 py-1.5 rounded-xl border border-dashed border-gold-primary/30 hover:border-gold-light text-gold-light hover:text-white bg-gold-primary/5 hover:bg-gold-primary/15 text-[10px] font-sans font-bold cursor-pointer transition-all flex items-center justify-center gap-1 active:scale-95"
                   >
-                    <span>🃏 Bắt Đầu Xáo Bộ Bài Vòng {currentRound}</span>
+                    ➕ Thêm Vòng Rút Mới
                   </button>
-                </motion.div>
-              )}
+                </div>
 
-              {/* Picking Deck (Deck interactive area) */}
-              {(step === 'SHUFFLING' || step === 'PICKING') && (
-                <motion.div
-                  key="picking"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-[#12122b]/55 border border-gold-primary/15 rounded-3xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible min-h-[380px] md:min-h-[440px] w-full"
-                >
-                  <div className="absolute w-[260px] h-[260px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_55s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                  
-                  {step === 'PICKING' && (
-                    <div className="text-center mt-2 flex flex-col gap-0.5 z-10 select-none">
-                      <span className="text-[9px] font-sans text-text-secondary uppercase tracking-widest leading-none font-bold">
-                        Đang nhặt Vòng {currentRound}:
-                      </span>
-                      <span className="text-xs font-cinzel text-gold-light font-bold uppercase tracking-wider animate-pulse">
-                        Nhặt quân số {currentPickCount + 1} / {cardsToPickThisRound}
-                      </span>
+                {/* Configurations for current round */}
+                {roundsData.find(r => r.roundNumber === currentRound) && (() => {
+                  const activeRoundData = roundsData.find(r => r.roundNumber === currentRound)!;
+                  return (
+                    <div className="flex flex-col gap-4 text-xs font-lora">
+                      
+                      {/* Round Name */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold font-sans">
+                          Tên Vòng Đang Chọn:
+                        </label>
+                        <input
+                          type="text"
+                          value={activeRoundData.roundName}
+                          onChange={(e) => {
+                            const name = e.target.value;
+                            setRoundsData((prev) => {
+                              return prev.map((r) => r.roundNumber === currentRound ? { ...r, roundName: name } : r);
+                            });
+                          }}
+                          className="rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs text-text-primary placeholder:text-text-secondary/35"
+                        />
+                      </div>
+
+                      {/* Soul Marks */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold font-sans">
+                          Dấu Ấn Linh Hồn (Màu Viền):
+                        </label>
+                        <div className="flex flex-wrap gap-1.5 mt-0.5">
+                          {SOUL_MARKS.map((mark, index) => {
+                            const isSelected = activeRoundData.soulMarkIndex === index;
+                            return (
+                              <button
+                                key={mark.name}
+                                type="button"
+                                onClick={() => {
+                                  setRoundsData((prev) => {
+                                    return prev.map((r) => r.roundNumber === currentRound ? { ...r, soulMarkIndex: index } : r);
+                                  });
+                                }}
+                                className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs transition-all cursor-pointer ${
+                                  isSelected
+                                    ? `${mark.bgClass} ${mark.borderClass} scale-110 shadow-lg`
+                                    : 'bg-white/5 border-white/10 hover:border-white/20'
+                                }`}
+                                title={mark.name}
+                              >
+                                <span>{mark.icon}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Cards Count Slider */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] text-text-secondary uppercase tracking-wider font-semibold font-sans">
+                            Số Lá Bài Cần Rút:
+                          </label>
+                          <span className="px-2 py-0.5 rounded bg-gold-primary/15 border border-gold-primary/30 text-gold-light font-sans font-bold text-[10px]">
+                            {activeRoundData.maxCards} lá
+                          </span>
+                        </div>
+                        <input
+                          type="range"
+                          min="1"
+                          max="20"
+                          value={cardsToPickThisRound}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setCardsToPickThisRound(val);
+                            setRoundsData((prev) => {
+                              return prev.map((r) => r.roundNumber === currentRound ? { ...r, maxCards: val } : r);
+                            });
+                          }}
+                          className="w-full accent-gold-primary bg-white/10 h-1.5 rounded-lg cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Shuffle Deck mode */}
+                      <div className="flex items-center gap-4 text-[10px] text-text-secondary font-sans mt-1">
+                        <span className="font-bold uppercase tracking-wider text-[9px]">Trộn bài:</span>
+                        <label className="flex items-center gap-1.5 cursor-pointer hover:text-text-primary transition-colors">
+                          <input
+                            type="radio"
+                            name={`deckMode-${currentRound}`}
+                            checked={activeRoundData.deckMode === 'fresh'}
+                            onChange={() => {
+                              setRoundsData((prev) => {
+                                return prev.map((r) => r.roundNumber === currentRound ? { ...r, deckMode: 'fresh' } : r);
+                              });
+                            }}
+                            className="accent-gold-primary w-3.5 h-3.5 cursor-pointer"
+                          />
+                          <span>Trộn mới 🔄</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer hover:text-text-primary transition-colors">
+                          <input
+                            type="radio"
+                            name={`deckMode-${currentRound}`}
+                            checked={activeRoundData.deckMode === 'continue'}
+                            onChange={() => {
+                              setRoundsData((prev) => {
+                                return prev.map((r) => r.roundNumber === currentRound ? { ...r, deckMode: 'continue' } : r);
+                              });
+                            }}
+                            className="accent-gold-primary w-3.5 h-3.5 cursor-pointer"
+                          />
+                          <span>Rút tiếp ➡️</span>
+                        </label>
+                      </div>
+
+                      {/* Action Buttons inside Drawer */}
+                      <div className="flex flex-col gap-2 mt-3 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowRoundSettings(false); // Close settings drawer when draw starts to see the overlay
+                            handleStartShuffle();
+                          }}
+                          className="w-full py-2.5 font-sans font-bold text-[11px] uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_12px_var(--color-gold-glow)] flex items-center justify-center gap-1.5 active:scale-95"
+                        >
+                          <span>🃏 Bắt Đầu Rút Bài</span>
+                        </button>
+
+                        {roundsData.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRound(currentRound)}
+                            className="w-full py-2 text-[10px] font-sans font-bold uppercase tracking-wider rounded-xl bg-red-950/20 border border-red-500/25 hover:border-red-500 hover:bg-red-950/40 text-red-400 cursor-pointer transition-all flex items-center justify-center gap-1"
+                          >
+                            🗑️ Xóa Vòng Này
+                          </button>
+                        )}
+                      </div>
+
+                    </div>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* CARD DECK DRAWING OVERLAY */}
+        <AnimatePresence>
+          {(step === 'SHUFFLING' || step === 'PICKING') && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="absolute inset-0 bg-[#070711]/92 backdrop-blur-md z-40 flex flex-col items-center justify-center p-4 border border-gold-primary/20"
+            >
+              {/* Close button at top right */}
+              <button
+                type="button"
+                onClick={() => setStep('SETUP')}
+                className="absolute top-4 right-4 z-50 px-3 py-1.5 text-text-secondary hover:text-gold-light transition-colors rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/30 cursor-pointer text-[10px] font-sans uppercase font-bold tracking-wider"
+              >
+                ❌ Đóng Cửa Sổ
+              </button>
+
+              {/* Inside is the CardDeck */}
+              <div className="relative w-full max-w-4xl flex flex-col items-center justify-center gap-2 overflow-visible">
+                {step === 'PICKING' && roundsData.find(r => r.roundNumber === currentRound) && (
+                  <div className="text-center mt-2 flex flex-col gap-0.5 z-10 select-none">
+                    <span className="text-[9px] font-sans text-text-secondary uppercase tracking-widest leading-none font-bold">
+                      Đang nhặt {roundsData.find(r => r.roundNumber === currentRound)?.roundName}:
+                    </span>
+                    <span className="text-xs font-cinzel text-gold-light font-bold uppercase tracking-wider animate-pulse">
+                      Nhặt quân số {(roundsData.find(r => r.roundNumber === currentRound)?.cards.length || 0) + 1} / {cardsToPickThisRound}
+                    </span>
+                  </div>
+                )}
+
+                <CardDeck
+                  cardsCount={
+                    roundsData.find(r => r.roundNumber === currentRound)?.deckMode === 'continue' && deckState
+                      ? 78 - deckState.drawnCardIds.size
+                      : 78 - (roundsData.find(r => r.roundNumber === currentRound)?.cards.length || 0)
+                  }
+                  onSelectCard={handleSelectCard}
+                  isShuffling={step === 'SHUFFLING'}
+                  isDeckSpread={step === 'PICKING'}
+                  shuffleTheme={shuffleTheme}
+                  pickingTheme={pickingTheme}
+                  weatherEffect={weatherEffect}
+                  reduceMotion={reduceMotion}
+                  onStopShuffle={() => {
+                    if ((window as any).finishFreeShuffle) {
+                      (window as any).finishFreeShuffle();
+                    }
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* RIGHT: Professional session notes and conversation panel */}
+      <AnimatePresence>
+        {showJournal && (
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 180 }}
+            className="w-full sm:w-[350px] flex-shrink-0 border-l border-white/10 bg-[#0d0d1a]/95 flex flex-col h-full z-20 shadow-2xl relative overflow-hidden backdrop-blur-md"
+          >
+            <div className="absolute inset-0 opacity-[0.035] pointer-events-none bg-radial from-transparent to-[#f4a261]/20 z-0" />
+
+            <div className="flex-1 flex flex-col h-full p-4 md:p-5 gap-4 overflow-hidden relative z-10">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-shrink-0 z-10 select-none">
+                <div className="flex items-center gap-2">
+                  <div>
+                    <h4 className="font-cinzel text-xs font-bold text-gold-light tracking-widest uppercase">
+                      Phiên Trải Nghiệm Tarot
+                    </h4>
+                    <p className="text-[9px] text-text-secondary/55 font-lora italic leading-none mt-1">
+                      Ghi lại trao đổi, cảm nhận và các kết luận trong phiên
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="z-10 flex flex-col gap-2 min-h-0 flex-1">
+                <div className="flex items-center justify-between gap-2 select-none flex-shrink-0">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-sans font-bold">
+                    Trao đổi tự do
+                  </span>
+                  {activeWorkspaceCard && (
+                    <span className="max-w-[150px] truncate text-[9px] text-gold-light/75 font-lora italic">
+                      Gắn với: {activeWorkspaceCard.card.nameVi}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex-1 min-h-[120px] overflow-y-auto rounded-2xl border border-white/[0.08] bg-black/20 p-3 flex flex-col gap-2 scrollbar-thin">
+                  {conversation.length > 0 ? (
+                    conversation.map((message) => {
+                      const relatedCard = allDrawnCards.find((card) => card.id === message.relatedCardId);
+                      const isGuide = message.speaker === 'guide';
+                      return (
+                        <div
+                          key={message.id}
+                          className={`max-w-[92%] rounded-2xl px-3 py-2 border text-xs leading-relaxed ${
+                            isGuide
+                              ? 'self-start bg-gold-primary/10 border-gold-primary/18 text-text-primary rounded-tl-sm'
+                              : 'self-end bg-white/[0.055] border-white/10 text-text-primary rounded-tr-sm'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2 text-[8px] font-sans font-bold uppercase tracking-wider text-text-secondary/60 mb-1 select-none">
+                            <span>{isGuide ? 'Người đọc' : 'Người hỏi'}</span>
+                            <span>{message.createdAt}</span>
+                          </div>
+                          <p className="font-lora whitespace-pre-line">{message.text}</p>
+                          {relatedCard && (
+                            <span className="mt-1 inline-block text-[8px] text-gold-light/70 font-sans uppercase tracking-wider select-none">
+                              {relatedCard.card.nameVi}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-center px-4">
+                      <p className="text-xs text-text-secondary/45 font-lora italic leading-relaxed">
+                        Ghi lại câu hỏi, phản hồi, giả thuyết và quyết định trong phiên. Nếu đang chọn một lá, tin nhắn sẽ được gắn với lá đó.
+                      </p>
                     </div>
                   )}
-
-                  <CardDeck
-                    cardsCount={78 - currentPickCount}
-                    onSelectCard={handleSelectCard}
-                    isShuffling={step === 'SHUFFLING'}
-                    isDeckSpread={step === 'PICKING'}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <FreeTarotWorkspace2D
-              cards={allDrawnCards}
-              activeCardId={activeCardId}
-              showCardControlPanel={showCardControlPanel}
-              onSelectCard={setActiveCardId}
-              onUpdateCard={handleUpdateWorkspaceCard}
-              onInspectCard={handleCardInspect}
-              onAutoArrange={handleAutoArrangeWorkspace}
-            />
-
-          </div>
-
-          {/* RIGHT: Professional session notes and conversation panel */}
-          <AnimatePresence>
-            {showJournal && (
-              <motion.div
-                initial={{ opacity: 0, x: 50, scale: 0.95 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 50, scale: 0.95 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-                className="lg:col-span-4 flex flex-col gap-4"
-              >
-                <div className="flex-1 flex flex-col gap-4 bg-bg-surface/28 border border-white/[0.06] rounded-3xl p-4 md:p-5 shadow-2xl relative overflow-hidden backdrop-blur-md min-h-[640px]">
-                  <div className="absolute inset-0 opacity-[0.035] pointer-events-none bg-radial from-transparent to-[#f4a261]/20 z-0" />
-
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10 flex-shrink-0 z-10 select-none">
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <h4 className="font-cinzel text-xs font-bold text-gold-light tracking-widest uppercase">
-                          Phiên Trải Nghiệm Tarot
-                        </h4>
-                        <p className="text-[9px] text-text-secondary/55 font-lora italic leading-none mt-1">
-                          Ghi lại trao đổi, cảm nhận và các kết luận trong phiên
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="z-10 flex flex-col gap-2 min-h-[250px]">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] text-text-secondary uppercase tracking-wider font-sans font-bold">
-                        Trao đổi tự do
-                      </span>
-                      {activeWorkspaceCard && (
-                        <span className="max-w-[150px] truncate text-[9px] text-gold-light/75 font-lora italic">
-                          Gắn với: {activeWorkspaceCard.card.nameVi}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="h-56 overflow-y-auto rounded-2xl border border-white/[0.08] bg-black/20 p-3 flex flex-col gap-2 scrollbar-thin">
-                      {conversation.length > 0 ? (
-                        conversation.map((message) => {
-                          const relatedCard = allDrawnCards.find((card) => card.id === message.relatedCardId);
-                          const isGuide = message.speaker === 'guide';
-                          return (
-                            <div
-                              key={message.id}
-                              className={`max-w-[92%] rounded-2xl px-3 py-2 border text-xs leading-relaxed ${
-                                isGuide
-                                  ? 'self-start bg-gold-primary/10 border-gold-primary/18 text-text-primary rounded-tl-sm'
-                                  : 'self-end bg-white/[0.055] border-white/10 text-text-primary rounded-tr-sm'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-2 text-[8px] font-sans font-bold uppercase tracking-wider text-text-secondary/60 mb-1">
-                                <span>{isGuide ? 'Người đọc' : 'Người hỏi'}</span>
-                                <span>{message.createdAt}</span>
-                              </div>
-                              <p className="font-lora whitespace-pre-line">{message.text}</p>
-                              {relatedCard && (
-                                <span className="mt-1 inline-block text-[8px] text-gold-light/70 font-sans uppercase tracking-wider">
-                                  {relatedCard.card.nameVi}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="flex-1 flex items-center justify-center text-center px-4">
-                          <p className="text-xs text-text-secondary/45 font-lora italic leading-relaxed">
-                            Ghi lại câu hỏi, phản hồi, giả thuyết và quyết định trong phiên. Nếu đang chọn một lá, tin nhắn sẽ được gắn với lá đó.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <form onSubmit={handleAddConversationMessage} className="flex flex-col gap-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setConversationSpeaker('guide')}
-                          className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            conversationSpeaker === 'guide'
-                              ? 'bg-gold-primary/18 border-gold-primary text-gold-light'
-                              : 'bg-white/5 border-white/10 text-text-secondary hover:border-gold-primary/30'
-                          }`}
-                        >
-                          Người đọc
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConversationSpeaker('seeker')}
-                          className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                            conversationSpeaker === 'seeker'
-                              ? 'bg-[#2a9d8f]/18 border-[#2a9d8f] text-[#48cae4]'
-                              : 'bg-white/5 border-white/10 text-text-secondary hover:border-[#2a9d8f]/35'
-                          }`}
-                        >
-                          Người hỏi
-                        </button>
-                      </div>
-                      <textarea
-                        value={conversationInput}
-                        onChange={(event) => setConversationInput(event.target.value)}
-                        placeholder="Nhập câu hỏi, phản hồi hoặc kết luận ngắn trong phiên..."
-                        className="h-20 resize-none rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs leading-relaxed text-text-primary placeholder:text-text-secondary/35 scrollbar-thin"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!conversationInput.trim()}
-                        className="w-full py-2.5 rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep font-sans font-bold text-xs uppercase tracking-widest cursor-pointer transition-all disabled:opacity-40 disabled:pointer-events-none"
-                      >
-                        Ghi Vào Phiên
-                      </button>
-                    </form>
-                  </div>
-
-                  <div className="flex-1 min-h-[260px] py-1 flex flex-col relative z-10">
-                    <label className="text-[10px] text-text-secondary uppercase tracking-wider font-sans font-bold mb-2">
-                      Nhật ký tổng hợp
-                    </label>
-                    <textarea
-                      value={journalNotes}
-                      onChange={(e) => handleJournalChange(e.target.value)}
-                      placeholder="Tóm tắt bối cảnh, các pattern chính, lời khuyên, hành động kế tiếp và điểm cần theo dõi sau phiên..."
-                      className="w-full flex-1 bg-transparent border-none focus:outline-none resize-none font-lora text-xs md:text-sm text-amber-100 placeholder:text-amber-100/25 leading-relaxed overflow-y-auto scrollbar-thin"
-                      style={{
-                        backgroundImage: 'linear-gradient(rgba(231,111,81,0.06) 1px, transparent 1px)',
-                        backgroundSize: '100% 28px',
-                        lineHeight: '28px',
-                      }}
-                    />
-                  </div>
-
-                  <div className="border-t border-[#e76f51]/15 pt-3 flex-shrink-0 flex items-center justify-between z-10 select-none">
-                    {step === 'RESULT' && currentRound < 3 ? (
-                      <button
-                        onClick={handleNextRound}
-                        className="px-4 py-2.5 rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep font-sans font-bold text-xs uppercase tracking-widest cursor-pointer transition-all shadow-[0_0_10px_var(--color-gold-glow)] flex items-center gap-1 active:scale-95 animate-pulse"
-                      >
-                        <span>Tiếp Tục Nhặt Vòng {currentRound + 1}</span>
-                        <span>➔</span>
-                      </button>
-                    ) : (
-                      <div className="text-[10px] text-text-secondary/40 font-lora italic leading-tight">
-                        {currentRound === 3 && step === 'RESULT'
-                          ? '✓ Đã hoàn thành nhặt 3 vòng tối đa.'
-                          : '✓ Hãy hoàn tất nhặt bài vòng này.'}
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleCopyResults}
-                      disabled={round1Cards.length === 0}
-                      className="px-4 py-2.5 rounded-xl font-sans font-bold text-xs uppercase tracking-widest transition-all shadow-xl cursor-pointer disabled:opacity-40 disabled:pointer-events-none active:scale-95 flex items-center gap-1 bg-white/5 border border-white/10 hover:border-gold-primary hover:bg-white/10 text-gold-light"
-                    >
-                      {copySuccess ? '✓ Đã Sao Chép' : '📋 Sao Chép'}
-                    </button>
-
-                  </div>
-
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
-        </div>
+                <form onSubmit={handleAddConversationMessage} className="flex flex-col gap-2 flex-shrink-0">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConversationSpeaker('guide')}
+                      className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        conversationSpeaker === 'guide'
+                          ? 'bg-gold-primary/18 border-gold-primary text-gold-light'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-gold-primary/30'
+                      }`}
+                    >
+                      Người đọc
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConversationSpeaker('seeker')}
+                      className={`py-2 rounded-xl border text-[10px] font-sans font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        conversationSpeaker === 'seeker'
+                          ? 'bg-[#2a9d8f]/18 border-[#2a9d8f] text-[#48cae4]'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-[#2a9d8f]/35'
+                      }`}
+                    >
+                      Người hỏi
+                    </button>
+                  </div>
+                  <textarea
+                    value={conversationInput}
+                    onChange={(event) => setConversationInput(event.target.value)}
+                    placeholder="Nhập câu hỏi, phản hồi..."
+                    className="h-14 resize-none rounded-xl bg-bg-elevated/45 border border-white/10 focus:border-gold-primary/45 outline-none px-3 py-2 text-xs leading-relaxed text-text-primary placeholder:text-text-secondary/35 scrollbar-thin"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!conversationInput.trim()}
+                    className="w-full py-2 rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep font-sans font-bold text-xs uppercase tracking-widest cursor-pointer transition-all disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    Ghi Vào Phiên
+                  </button>
+                </form>
+              </div>
 
-        {/* FLOATING ACTION BOTTOM ROW IF NOTEPAD IS HIDDEN */}
-        {!showJournal && step === 'RESULT' && currentRound < 3 && (
-          <div className="w-full flex justify-center py-4 select-none animate-[fadeIn_0.3s_ease-out]">
-            <button
-              onClick={handleNextRound}
-              className="px-6 py-3.5 rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep font-sans font-bold text-sm uppercase tracking-widest cursor-pointer transition-all shadow-[0_0_15px_var(--color-gold-glow)] flex items-center gap-1.5 active:scale-95"
-            >
-              <span>Tiếp Tục Nhặt Bài Vòng {currentRound + 1}</span>
-              <span>➔</span>
-            </button>
-          </div>
+              <div className="h-44 py-1 flex flex-col relative z-10 flex-shrink-0">
+                <label className="text-[10px] text-text-secondary uppercase tracking-wider font-sans font-bold mb-2 select-none">
+                  Nhật ký tổng hợp
+                </label>
+                <textarea
+                  value={journalNotes}
+                  onChange={(e) => handleJournalChange(e.target.value)}
+                  placeholder="Tóm tắt bối cảnh, lời khuyên..."
+                  className="w-full flex-1 bg-transparent border-none focus:outline-none resize-none font-lora text-xs md:text-sm text-amber-100 placeholder:text-amber-100/25 leading-relaxed overflow-y-auto scrollbar-thin"
+                  style={{
+                    backgroundImage: 'linear-gradient(rgba(231,111,81,0.06) 1px, transparent 1px)',
+                    backgroundSize: '100% 28px',
+                    lineHeight: '28px',
+                  }}
+                />
+              </div>
+
+              <div className="border-t border-[#e76f51]/15 pt-3 flex-shrink-0 flex items-center justify-between z-10 select-none">
+                <div className="text-[9px] text-text-secondary/40 font-lora italic leading-tight max-w-[150px]">
+                  ✓ Tự do điều khiển và nhặt bài không giới hạn.
+                </div>
+
+                <button
+                  onClick={handleCopyResults}
+                  disabled={allDrawnCards.length === 0}
+                  className="px-3 py-2 rounded-xl font-sans font-bold text-[10px] uppercase tracking-widest transition-all shadow-xl cursor-pointer disabled:opacity-40 disabled:pointer-events-none active:scale-95 flex items-center gap-1 bg-white/5 border border-white/10 hover:border-gold-primary hover:bg-white/10 text-gold-light"
+                >
+                  {copySuccess ? '✓ Đã Sao Chép' : '📋 Sao Chép'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
-
-      </div>
+      </AnimatePresence>
 
       {/* inspector Modal */}
       {selectedCard && (

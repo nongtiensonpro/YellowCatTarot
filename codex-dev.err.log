@@ -1,3 +1,6 @@
 [browser] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
 [browser] Image with src "/cards/MinorArcana/Wands/FourofWands.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
 Read more: https://nextjs.org/docs/app/api-reference/components/image#loading
+[browser] THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.
+[browser] Image with src "/cards/MinorArcana/Swords/TwoofSwords.webp" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading

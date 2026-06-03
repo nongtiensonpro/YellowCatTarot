@@ -38,8 +38,9 @@ const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
 type FlowStep = 'INPUT' | 'SHUFFLING' | 'PICKING' | 'RESULT' | 'INTERPRETING' | 'COMPLETE';
 
 export default function CelticCrossReading() {
-  const { apiKey } = useApiKey();
+  const { apiKey, shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
   const spreadType = spreadTypes['celtic-cross'];
+  const [weatherEffect, setWeatherEffect] = useState<'wind' | 'sun' | 'fog' | null>(null);
 
   // React state
   const [step, setStep] = useState<FlowStep>('INPUT');
@@ -135,8 +136,15 @@ export default function CelticCrossReading() {
     setAiError('');
     startCollecting();
 
-    // Run shuffle animation for 1.8 seconds while gathering biometric mouse movements
-    setTimeout(async () => {
+    if (shuffleTheme === 'wheel-of-fate') {
+      const weathers = ['wind', 'sun', 'fog'] as const;
+      const rw = weathers[Math.floor(Math.random() * weathers.length)];
+      setWeatherEffect(rw);
+    } else {
+      setWeatherEffect(null);
+    }
+
+    const finishShuffle = async () => {
       try {
         const { events, timings } = stopCollecting();
         // Execute the secure 3-pass Fisher-Yates shuffle
@@ -154,7 +162,13 @@ export default function CelticCrossReading() {
         setStep('INPUT');
         alert('Có lỗi xảy ra khi thu thập năng lượng xáo bài. Hãy thử lại nhé!');
       }
-    }, 1800);
+    };
+
+    if (shuffleTheme !== 'soot-sprite') {
+      setTimeout(finishShuffle, reduceMotion ? 100 : 1800);
+    } else {
+      (window as any).finishCelticShuffle = finishShuffle;
+    }
   };
 
   // Card pick handler (Pre-assignment secure algorithm)
@@ -190,9 +204,24 @@ export default function CelticCrossReading() {
         setFaceDownCards(nextFaceDown);
         
         setStep('SHUFFLING');
-        setTimeout(() => {
+
+        if (shuffleTheme === 'wheel-of-fate') {
+          const weathers = ['wind', 'sun', 'fog'] as const;
+          const rw = weathers[Math.floor(Math.random() * weathers.length)];
+          setWeatherEffect(rw);
+        } else {
+          setWeatherEffect(null);
+        }
+
+        const finishShuffle = () => {
           setStep('PICKING');
-        }, 1500);
+        };
+
+        if (shuffleTheme !== 'soot-sprite') {
+          setTimeout(finishShuffle, reduceMotion ? 100 : 1500);
+        } else {
+          (window as any).finishCelticShuffle = finishShuffle;
+        }
       }
     } catch (err) {
       console.error(err);
@@ -425,6 +454,15 @@ export default function CelticCrossReading() {
                   onSelectCard={handleSelectCard}
                   isShuffling={step === 'SHUFFLING'}
                   isDeckSpread={step === 'PICKING'}
+                  shuffleTheme={shuffleTheme}
+                  pickingTheme={pickingTheme}
+                  weatherEffect={weatherEffect}
+                  reduceMotion={reduceMotion}
+                  onStopShuffle={() => {
+                    if ((window as any).finishCelticShuffle) {
+                      (window as any).finishCelticShuffle();
+                    }
+                  }}
                 />
               </div>
             )}

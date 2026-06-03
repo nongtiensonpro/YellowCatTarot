@@ -11,6 +11,14 @@ interface ApiKeyContextType {
   setIsKeyValid: (valid: boolean | null) => void;
   preferredCardBack: string;
   setPreferredCardBack: (back: string) => void;
+  shuffleTheme: 'classic' | 'wheel-of-fate' | 'soot-sprite';
+  setShuffleTheme: (theme: 'classic' | 'wheel-of-fate' | 'soot-sprite') => void;
+  pickingTheme: 'classic' | 'reflecting-pool' | 'falling-petals';
+  setPickingTheme: (theme: 'classic' | 'reflecting-pool' | 'falling-petals') => void;
+  enableSound: boolean;
+  setEnableSound: (enable: boolean) => void;
+  reduceMotion: boolean;
+  setReduceMotion: (reduce: boolean) => void;
 }
 
 const ApiKeyContext = createContext<ApiKeyContextType | undefined>(undefined);
@@ -20,6 +28,12 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
   const [preferredModel, setPreferredModel] = useState<string>('gemini-flash-latest');
   const [preferredCardBack, setPreferredCardBack] = useState<string>('default');
   const [isKeyValid, setIsKeyValid] = useState<boolean | null>(null);
+
+  // Ghibli Themes settings
+  const [shuffleTheme, _setShuffleTheme] = useState<'classic' | 'wheel-of-fate' | 'soot-sprite'>('classic');
+  const [pickingTheme, _setPickingTheme] = useState<'classic' | 'reflecting-pool' | 'falling-petals'>('classic');
+  const [enableSound, _setEnableSound] = useState<boolean>(false); // Mặc định tắt để tránh người dùng giật mình
+  const [reduceMotion, _setReduceMotion] = useState<boolean>(false); // Mặc định tắt
 
   // Load key from sessionStorage on client mount
   useEffect(() => {
@@ -36,6 +50,17 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
     if (savedCardBack) {
       setPreferredCardBack(savedCardBack);
     }
+
+    // Load Ghibli settings
+    const savedShuffle = sessionStorage.getItem('gemini_shuffle_theme') as any;
+    const savedPicking = sessionStorage.getItem('gemini_picking_theme') as any;
+    const savedSound = sessionStorage.getItem('gemini_enable_sound');
+    const savedMotion = sessionStorage.getItem('gemini_reduce_motion');
+
+    if (savedShuffle) _setShuffleTheme(savedShuffle);
+    if (savedPicking) _setPickingTheme(savedPicking);
+    if (savedSound) _setEnableSound(savedSound === 'true');
+    if (savedMotion) _setReduceMotion(savedMotion === 'true');
   }, []);
 
   const setApiKey = (key: string) => {
@@ -59,6 +84,26 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.setItem('gemini_preferred_card_back', back);
   };
 
+  const updateShuffleTheme = (theme: 'classic' | 'wheel-of-fate' | 'soot-sprite') => {
+    _setShuffleTheme(theme);
+    sessionStorage.setItem('gemini_shuffle_theme', theme);
+  };
+
+  const updatePickingTheme = (theme: 'classic' | 'reflecting-pool' | 'falling-petals') => {
+    _setPickingTheme(theme);
+    sessionStorage.setItem('gemini_picking_theme', theme);
+  };
+
+  const updateEnableSound = (enable: boolean) => {
+    _setEnableSound(enable);
+    sessionStorage.setItem('gemini_enable_sound', enable ? 'true' : 'false');
+  };
+
+  const updateReduceMotion = (reduce: boolean) => {
+    _setReduceMotion(reduce);
+    sessionStorage.setItem('gemini_reduce_motion', reduce ? 'true' : 'false');
+  };
+
   return (
     <ApiKeyContext.Provider
       value={{
@@ -70,6 +115,14 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
         setIsKeyValid,
         preferredCardBack,
         setPreferredCardBack: updatePreferredCardBack,
+        shuffleTheme,
+        setShuffleTheme: updateShuffleTheme,
+        pickingTheme,
+        setPickingTheme: updatePickingTheme,
+        enableSound,
+        setEnableSound: updateEnableSound,
+        reduceMotion,
+        setReduceMotion: updateReduceMotion,
       }}
     >
       {children}

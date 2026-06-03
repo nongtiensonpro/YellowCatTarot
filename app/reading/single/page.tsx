@@ -27,8 +27,9 @@ const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
 type FlowStep = 'INPUT' | 'SHUFFLING' | 'PICKING' | 'RESULT' | 'INTERPRETING' | 'COMPLETE';
 
 export default function SingleCardReading() {
-  const { apiKey } = useApiKey();
+  const { apiKey, shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
   const spreadType = spreadTypes.single;
+  const [weatherEffect, setWeatherEffect] = useState<'wind' | 'sun' | 'fog' | null>(null);
 
   // React State
   const [step, setStep] = useState<FlowStep>('INPUT');
@@ -105,10 +106,24 @@ export default function SingleCardReading() {
     const randomResults = getRandomCards(1);
     setShuffledCards(randomResults);
 
-    // Thời gian xáo bài: 1.8 giây, tự động chuyển sang bước PICKING
-    setTimeout(() => {
+    if (shuffleTheme === 'wheel-of-fate') {
+      const weathers = ['wind', 'sun', 'fog'] as const;
+      const rw = weathers[Math.floor(Math.random() * weathers.length)];
+      setWeatherEffect(rw);
+    } else {
+      setWeatherEffect(null);
+    }
+
+    const finishShuffle = () => {
       setStep('PICKING');
-    }, 1800);
+    };
+
+    if (shuffleTheme !== 'soot-sprite') {
+      // Thời gian xáo bài: 1.8 giây, tự động chuyển sang bước PICKING
+      setTimeout(finishShuffle, reduceMotion ? 100 : 1800);
+    } else {
+      (window as any).finishSingleShuffle = finishShuffle;
+    }
   };
 
   // Chọn lá bài
@@ -266,6 +281,15 @@ export default function SingleCardReading() {
                   onSelectCard={handleSelectCard}
                   isShuffling={step === 'SHUFFLING'}
                   isDeckSpread={step === 'PICKING'}
+                  shuffleTheme={shuffleTheme}
+                  pickingTheme={pickingTheme}
+                  weatherEffect={weatherEffect}
+                  reduceMotion={reduceMotion}
+                  onStopShuffle={() => {
+                    if ((window as any).finishSingleShuffle) {
+                      (window as any).finishSingleShuffle();
+                    }
+                  }}
                 />
               </div>
             )}

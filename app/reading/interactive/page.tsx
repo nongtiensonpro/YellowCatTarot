@@ -31,8 +31,9 @@ const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
 type FlowStep = 'INPUT' | 'INITIAL_SHUFFLE' | 'INITIAL_PICK' | 'CHAT_ACTIVE' | 'CHAT_SHUFFLING' | 'CHAT_PICKING';
 
 export default function InteractiveReadingPage() {
-  const { apiKey } = useApiKey();
+  const { apiKey, shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
   const { startCollecting, stopCollecting, onMouseMove, onTouchMove } = useEntropyCollector();
+  const [weatherEffect, setWeatherEffect] = useState<'wind' | 'sun' | 'fog' | null>(null);
 
   // Step state
   const [step, setStep] = useState<FlowStep>('INPUT');
@@ -134,8 +135,15 @@ export default function InteractiveReadingPage() {
     setCurrentPickCount(0);
     startCollecting();
 
-    // Simulate shuffling animation
-    setTimeout(async () => {
+    if (shuffleTheme === 'wheel-of-fate') {
+      const weathers = ['wind', 'sun', 'fog'] as const;
+      const rw = weathers[Math.floor(Math.random() * weathers.length)];
+      setWeatherEffect(rw);
+    } else {
+      setWeatherEffect(null);
+    }
+
+    const finishShuffle = async () => {
       const entropy = stopCollecting();
       const shuffledOrder = await hyperShuffle(entropy.events, entropy.timings);
       const newDeck = createNewDeck(shuffledOrder);
@@ -144,7 +152,13 @@ export default function InteractiveReadingPage() {
       setDeckState(newDeck);
       setFaceDownPositions(faceDowns);
       setStep('INITIAL_PICK');
-    }, 1800);
+    };
+
+    if (shuffleTheme !== 'soot-sprite') {
+      setTimeout(finishShuffle, reduceMotion ? 100 : 1800);
+    } else {
+      (window as any).finishInteractiveInitialShuffle = finishShuffle;
+    }
   };
 
   // INITIAL PICK CARDS (1 or 3)
@@ -307,12 +321,26 @@ export default function InteractiveReadingPage() {
     setStep('CHAT_SHUFFLING');
     startCollecting();
 
-    setTimeout(() => {
+    if (shuffleTheme === 'wheel-of-fate') {
+      const weathers = ['wind', 'sun', 'fog'] as const;
+      const rw = weathers[Math.floor(Math.random() * weathers.length)];
+      setWeatherEffect(rw);
+    } else {
+      setWeatherEffect(null);
+    }
+
+    const finishShuffle = () => {
       const entropy = stopCollecting();
       const faceDowns = prepareFaceDownCards(deckState, 78 - drawnCards.length);
       setFaceDownPositions(faceDowns);
       setStep('CHAT_PICKING');
-    }, 1500);
+    };
+
+    if (shuffleTheme !== 'soot-sprite') {
+      setTimeout(finishShuffle, reduceMotion ? 100 : 1500);
+    } else {
+      (window as any).finishInteractiveSupportShuffle = finishShuffle;
+    }
   };
 
   // PICK MID-CHAT SUPPORT CARD
@@ -494,6 +522,15 @@ export default function InteractiveReadingPage() {
                 onSelectCard={handleSelectInitialCard}
                 isShuffling={step === 'INITIAL_SHUFFLE'}
                 isDeckSpread={step === 'INITIAL_PICK'}
+                shuffleTheme={shuffleTheme}
+                pickingTheme={pickingTheme}
+                weatherEffect={weatherEffect}
+                reduceMotion={reduceMotion}
+                onStopShuffle={() => {
+                  if ((window as any).finishInteractiveInitialShuffle) {
+                    (window as any).finishInteractiveInitialShuffle();
+                  }
+                }}
               />
             </div>
           )}
@@ -522,6 +559,15 @@ export default function InteractiveReadingPage() {
                 onSelectCard={handleSelectSupportCard}
                 isShuffling={step === 'CHAT_SHUFFLING'}
                 isDeckSpread={step === 'CHAT_PICKING'}
+                shuffleTheme={shuffleTheme}
+                pickingTheme={pickingTheme}
+                weatherEffect={weatherEffect}
+                reduceMotion={reduceMotion}
+                onStopShuffle={() => {
+                  if ((window as any).finishInteractiveSupportShuffle) {
+                    (window as any).finishInteractiveSupportShuffle();
+                  }
+                }}
               />
             </div>
           )}
