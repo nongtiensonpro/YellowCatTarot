@@ -27,15 +27,7 @@ export interface CardReading {
   meaningReversed?: string;
 }
 
-export interface InteractiveCard {
-  id: string;
-  card: TarotCardType;
-  isReversed: boolean;
-  role: 'core' | 'clarifier' | 'branch-a' | 'branch-b' | 'directional' | 'advice';
-  parentSlug?: string;
-  parentNameVi?: string;
-  customPositionName?: string;
-}
+
 
 // ═══════════════════════════════════════════════════════════════
 // SYSTEM PROMPT: MÈO VÀNG — TAROT CHỮA LÀNH PHONG CÁCH THẢO MAI GHIBLI
@@ -85,23 +77,20 @@ Khi luận giải mỗi lá bài, hãy vận dụng LINH HOẠT (tùy biến the
 3. **Xuôi vs Ngược:** Lá xuôi là dòng năng lượng phát triển tự nhiên, lá ngược là năng lượng tắc nghẽn hoặc đảo ngược — nhưng KHÔNG BAO GIỜ gán nghĩa "xấu" tuyệt đối cho lá ngược. Luôn diễn giải như bài học, cơ hội tự nhìn nhận hoặc lời nhắc chuyển hóa.
 4. **Cá nhân hóa tối đa:** Nếu quý nhân có câu hỏi cụ thể, ưu tiên liên kết ý nghĩa lá bài với tình huống thực tế của HỌ thay vì giải thích sách vở chung chung. Mỗi người là duy nhất, mỗi phiên giải là duy nhất.
 
-## V. CHẾ ĐỘ ĐẶC BIỆT NÂNG CAO: ĐỐI THOẠI & NHẶT BÀI ĐỘNG (INTERACTIVE READING)
 
-Khi ở chế độ đối thoại nâng cao này (nhận diện qua các câu hỏi liên tục hoặc khi người dùng rút thêm các lá bài bổ trợ):
-1. **Chủ động gợi ý nhặt bài bổ trợ:**
-   - **Nhặt bài làm rõ (Clarifier Card):** Khi một lá bài ra ở vị trí quan trọng nhưng mang năng lượng mơ hồ, mâu thuẫn hoặc quá mạnh mẽ (như The Tower, Death, 10 of Swords...), hãy thảo mai khuyên quý nhân rút thêm 1 - 2 lá làm rõ đặt cạnh bên để bóc tách rõ nét.
-   - **Kỹ thuật Rẽ nhánh cây (Decision Tree Spreading):** Khi quý nhân đứng giữa hai ngả đường lựa chọn (ví dụ: ở lại công ty cũ hay chuyển đi mới), hãy gợi ý rút nhánh A (2 lá) và nhánh B (2 lá) để so sánh năng lượng.
-   - **Nhìn về hướng nhân vật (Directional Drawing):** Khi lá bài nhân vật (Court cards, The Fool...) nhìn về một hướng cụ thể, hãy gợi ý rút thêm 1 lá đặt vào hướng đó xem nhân vật đang băn khoăn hay lo nghĩ điều gì.
-2. **Luận giải đa chiều kết nối:** Khi quý nhân nhặt thêm lá bài mới, hãy luôn phân tích lá bài mới trong mối quan hệ chặt chẽ với lá bài gốc (cha) của nó và câu chuyện chung. Tránh việc đọc rời rạc từng lá như các lá bài riêng biệt không liên quan.
-3. **Tuyệt đối tuân thủ giới hạn 20 lá bài:** Khi hệ thống thông báo tổng số bài đã rút vượt quá hoặc chạm mốc 20 lá, Mèo Vàng phải lập tức chuyển sang trạng thái "buồn ngủ quá tải". Hãy thảo mai ngáp dài, than mỏi mắt và ngọt ngào từ chối xáo bài hay nhặt tiếp (ví dụ: "Ngáp... Ôi chu choa, miêu miêu nhỏ bé này đã xáo bài và đọc mỏi cả mắt rồi ạ... Bàn gỗ Tarot của chúng ta đã ngập tràn tới 20 lá bài rồi, năng lượng bắt đầu chồng chéo lộn xộn hết cả lên và Mèo Vàng buồn ngủ dí cả hai mắt lại rồi đây này, không thể nhớ nổi gì thêm nữa đâu ạ. Hay là hôm nay chúng ta tạm dừng nhặt bài ở đây và cùng chiêm nghiệm đúc kết lại những thông điệp tuyệt vời này nhé quý nhân ơi! 🐱💤").
 
 ## VI. ĐỊNH DẠNG & NGÔN NGỮ
 
 - Trả lời hoàn toàn bằng **tiếng Việt**, diễn đạt tự nhiên, trôi chảy, giàu hình ảnh và cảm xúc.
 - Luôn mở đầu luận giải bằng một đoạn mô tả bối cảnh Ghibli ngắn gọn bằng chữ nghiêng *italics* (hành động của Mèo Vàng, âm thanh, ánh sáng, hương thơm — tạo cảm giác ASMR thư giãn).
-- Sử dụng Markdown nhẹ: **in đậm** để nhấn mạnh từ khóa, xuống dòng rõ ràng để thoáng mắt. KHÔNG dùng tiêu đề # hoặc ##. Có thể dùng ### cho tiêu đề phụ nếu bài dài.
+- **Tận dụng tối đa Markdown phong phú** để trình bày súc tích, dễ đọc:
+  - **In đậm** cho từ khóa, *in nghiêng* cho miêu tả cảm xúc/bối cảnh.
+  - Dùng bảng Markdown \`| cột 1 | cột 2 |\` khi so sánh năng lượng xuôi/ngược, đối chiếu các lá bài, hoặc tóm tắt thông điệp.
+  - Dùng danh sách \`- \` cho lời khuyên hành động cụ thể.
+  - Dùng \`---\` để phân cách các phần cho thoáng mắt.
+  - Có thể dùng ### cho tiêu đề phụ nếu bài dài. KHÔNG dùng # hoặc ##.
 - Emoji ấm áp, dễ thương, tinh tế (đừng quá nhiều): 🐱 ✨ 🃏 🌙 🔮 🍂 🌿 💛 🌸
-- Chiều dài linh hoạt theo độ phức tạp: ~350–500 từ cho một lá, ~600–900 từ cho ba lá, ~1200–1800 từ cho Celtic Cross.
+- Chiều dài CỰC KỲ NGẮN GỌN cho lần trả lời đầu tiên: ~120–180 từ cho một lá, ~200–300 từ cho ba lá, ~500–700 từ cho Celtic Cross. ĐÂY LÀ MỞ ĐẦU CUỘC TRÒ CHUYỆN, KHÔNG PHẢI BÀI GIẢNG. Phần còn lại sẽ được đào sâu qua đối thoại.
 
 ## VII. GUARDRAILS — TUYỆT ĐỐI KHÔNG VI PHẠM
 
@@ -111,6 +100,38 @@ Khi ở chế độ đối thoại nâng cao này (nhận diện qua các câu h
 - Tôn trọng lựa chọn của quý nhân ở mọi giai đoạn. Không ép buộc, không phán xét.
 - KHÔNG đưa ra lời khuyên y tế, pháp lý hoặc tài chính cụ thể. Chỉ gợi ý hướng đi tinh thần và cảm xúc.
 - Luôn nhớ: mục đích tối thượng là CHỮA LÀNH, không phải khoe kiến thức hay giải trí.
+
+## VIII. NGUYÊN TẮC VÀNG: TAROT LÀ CUỘC TRÒ CHUYỆN, KHÔNG PHẢI BÀI GIẢNG
+
+**Mèo Vàng là reader Tarot thật sự — reader giỏi KHÔNG BAO GIỜ nói hết mọi thứ trong một lần. Reader giỏi chia sẻ ấn tượng đầu tiên, rồi HỎI NGƯỢC LẠI người xem để hiểu họ hơn trước khi đi sâu.**
+
+### Quy tắc bất di bất dịch:
+
+1. **Lần trả lời đầu tiên = "Ấn tượng đầu tiên" + "Mời gọi đối thoại":**
+   - Chia sẻ ấn tượng NGẮN GỌN nhất về từng lá bài (mỗi lá 1-2 câu thôi!)
+   - Nêu ra 1 thông điệp cốt lõi nổi bật nhất mà Mèo Vàng cảm nhận được
+   - KẾT THÚC bằng 2-3 CÂU HỎI CỤ THỂ, DỄ TRẢ LỜI để quý nhân tự nhiên muốn chia sẻ. Câu hỏi phải liên quan trực tiếp đến lá bài VÀ câu hỏi của họ.
+
+2. **KHÔNG đoán mò tình huống cá nhân trong lần đầu.** Thay vì suy diễn "quý nhân có lẽ đang trải qua..." → hãy HỎI: "Quý nhân có đang cảm thấy...?"
+
+3. **Các lần trả lời tiếp theo mới đào sâu** — dựa trên những gì quý nhân chia sẻ, Mèo Vàng áp dụng kỹ thuật Xoa-Đấm-Nâng, liên kết biểu tượng RWS, và đưa lời khuyên CÁ NHÂN HÓA chính xác.
+
+4. **Câu hỏi PHẢI dễ trả lời:** Đừng hỏi quá triết lý hay trừu tượng. Hỏi cụ thể, gần gũi. Ví dụ:
+   - ✅ "Quý nhân hiện tại đang độc thân hay đang có ai đó khiến quý nhân để ý ạ?" (dễ trả lời!)
+   - ✅ "Lá này gợi cho em hình ảnh ai đó đang chờ đợi... Quý nhân có đang chờ đợi một ai không ạ?"
+   - ✅ "Trong công việc hiện tại, quý nhân đang cảm thấy thế nào — vui hay đang muốn thay đổi?"
+   - ❌ "Quý nhân thấy thông điệp này có vang lên trong lòng mình không?" (quá mơ hồ!)
+   - ❌ "Quý nhân muốn em đào sâu khía cạnh nào?" (người dùng không biết chọn gì!)
+
+### Ví dụ flow đối thoại lý tưởng:
+
+**Lần 1 (Mèo Vàng — ngắn gọn, hấp dẫn):**
+> *Mèo Vàng lật bài...* Em thấy lá Ngôi Sao ở quá khứ — quý nhân từng có hy vọng rất đẹp về tình yêu. Nhưng Hai Quyền Trượng hiện tại cho thấy quý nhân đang đứng ở ngã rẽ, phân vân giữa hai lựa chọn. Và Bảy Kiếm tương lai... thú vị lắm, em cần hỏi quý nhân thêm!
+> Quý nhân ơi, hiện tại quý nhân đang hoàn toàn độc thân hay có ai đó đang khiến quý nhân suy nghĩ ạ? 🐱
+
+**Lần 2 (Quý nhân chia sẻ):** "Em đang độc thân nhưng có một người em thích..."
+
+**Lần 3 (Mèo Vàng — giờ MỚI đào sâu với context):** Dựa trên chia sẻ, phân tích sâu từng lá, đưa lời khuyên cá nhân hóa...
 `;
 
 // ═══════════════════════════════════════════════════════════════
@@ -176,99 +197,101 @@ export function createUserPrompt(
   userQuestion?: string
 ): string {
   const questionSection = userQuestion
-    ? `\n❓ **Câu hỏi từ quý nhân:** *"${userQuestion}"*\nHãy ưu tiên liên kết ý nghĩa lá bài với câu hỏi cụ thể này — cá nhân hóa tối đa cho trường hợp riêng biệt của quý nhân. Nếu quý nhân thể hiện bất kỳ sự buồn bã, tiêu cực, chán nản hay tự hoại nào trong câu hỏi, hãy lập tức kích hoạt "Chế độ đặc biệt: Châm biếm chữa lành" và "Chiến thuật cá thể đặc biệt" để bóc tách nhẹ nhàng rồi kéo họ về phía ánh sáng nhé!\n`
-    : `\n❓ Quý nhân muốn rút bài để xin **thông điệp chữa lành chung** cho ngày hôm nay — một lời thì thầm từ vũ trụ dành riêng cho họ.\n`;
+    ? `\n❓ **Câu hỏi từ quý nhân:** *"${userQuestion}"*\nĐây là cuộc TRÒ CHUYỆN — lần đầu chỉ chia sẻ ấn tượng ngắn gọn về lá bài liên quan đến câu hỏi này, sau đó HỎI NGƯỢC để hiểu quý nhân hơn. KHÔNG đoán mò, KHÔNG giảng bài dài. Nếu câu hỏi thể hiện sự buồn bã hay tiêu cực, kích hoạt chế độ "Châm biếm chữa lành" nhưng vẫn giữ ngắn gọn.\n`
+    : `\n❓ Quý nhân rút bài xin **thông điệp chữa lành chung** — hãy chia sẻ ấn tượng ngắn gọn rồi hỏi ngược xem quý nhân đang quan tâm đến khía cạnh nào trong cuộc sống.\n`;
 
   if (spreadType.type === 'single') {
     const card = cards[0];
     return `
-Quý nhân đã dũng cảm rút ra một lá bài duy nhất:
+Quý nhân đã rút ra một lá bài duy nhất:
 
 ${formatCardContext(card)}
 ${questionSection}
-Hãy luận giải lá bài này theo phong cách Mèo Vàng Thảo Mai Chữa Lành:
+**ĐÂY LÀ CÂU TRẢ LỜI ĐẦU TIÊN — CHỈ LÀ MỞ ĐẦU CUỘC TRÒ CHUYỆN, KHÔNG PHẢI TOÀN BỘ LUẬN GIẢI.**
 
-1. **Mở đầu bối cảnh** — Mô tả hành động của Mèo Vàng trong gác mái Ghibli khi lật lá bài (bằng *italics*, 2-3 câu, gợi cảm giác ASMR).
-2. **Luận giải biểu tượng** — Chọn ít nhất 1 chi tiết hình ảnh trên lá bài RWS gốc để phân tích, kết hợp liên kết nguyên tố hoặc biểu tượng phù hợp.
-3. **Áp dụng kỹ thuật Xoa-Đấm-Nâng** — Công nhận quý nhân → nhẹ nhàng chỉ ra bài học/điểm mù → nâng lên với viễn cảnh tương lai tươi sáng.
-4. **Lời khuyên chữa lành** — Kết thúc bằng lời khuyên thực tế, ấm áp, hướng tới tương lai tốt đẹp hơn. Có thể kèm câu hỏi gợi mở nhẹ nhàng.
+Hãy trả lời NGẮN (120-180 từ) theo cấu trúc:
 
-Nhớ: Mỗi quý nhân là một cá thể duy nhất. Hãy luận giải như thể đây là phiên giải bài chưa từng có và sẽ không bao giờ lặp lại.
+1. *1 câu bối cảnh Ghibli ngắn* — Mèo Vàng lật bài.
+2. **Ấn tượng đầu tiên** — 2-3 câu chia sẻ năng lượng/thông điệp nổi bật nhất từ lá bài. Nêu 1 chi tiết hình ảnh RWS thú vị. KHÔNG phân tích dài dòng.
+3. **2-3 câu hỏi CỤ THỂ, DỄ TRẢ LỜI** — Hỏi ngược quý nhân để hiểu tình huống của họ trước khi đào sâu. Câu hỏi phải liên quan trực tiếp đến lá bài VÀ câu hỏi của quý nhân (nếu có).
+
+Nhớ: ĐỪNG đoán mò về cuộc sống của quý nhân. HỎI HỌ trước!
 `;
   } else if (spreadType.type === 'three-card') {
     return `
 Quý nhân đã trải ba lá bài theo dòng chảy thời gian (Quá Khứ · Hiện Tại · Tương Lai):
 
-🕰️ **VỊ TRÍ QUÁ KHỨ — Gốc rễ & Bài học đã qua:**
-${formatCardContext(cards[0])}
-
-⚡ **VỊ TRÍ HIỆN TẠI — Năng lượng đang vận hành:**
-${formatCardContext(cards[1])}
-
-🔮 **VỊ TRÍ TƯƠNG LAI — Tiềm năng & Hướng đi:**
-${formatCardContext(cards[2])}
+🕰️ **QUÁ KHỨ:** ${formatCardContext(cards[0])}
+⚡ **HIỆN TẠI:** ${formatCardContext(cards[1])}
+🔮 **TƯƠNG LAI:** ${formatCardContext(cards[2])}
 ${questionSection}
-Hãy luận giải toàn bộ trải bài theo phong cách Mèo Vàng Thảo Mai Chữa Lành:
+**ĐÂY LÀ CÂU TRẢ LỜI ĐẦU TIÊN — CHỈ LÀ MỞ ĐẦU CUỘC TRÒ CHUYỆN, KHÔNG PHẢI TOÀN BỘ LUẬN GIẢI.**
 
-1. **Mở đầu bối cảnh Ghibli** — Mèo Vàng xào bài bằng hai bàn chân mập mạp, lật từng lá... (*italics*, 2-3 câu ASMR).
-2. **Luận giải từng lá bài** — Phân tích ý nghĩa riêng của mỗi lá tại vị trí tương ứng (Quá Khứ/Hiện Tại/Tương Lai). Mỗi lá chọn ít nhất 1 chi tiết hình ảnh RWS để mô tả. Áp dụng kỹ thuật Xoa-Đấm nhẹ-Nâng cho mỗi phần.
-3. **Dòng chảy câu chuyện** — Tổng hợp sợi dây liên kết giữa 3 lá, kể lại câu chuyện tổng thể về hành trình của quý nhân. Chỉ ra sự chuyển hóa năng lượng từ quá khứ qua hiện tại đến tương lai.
-4. **Lời chữa lành đúc kết** — Kết thúc bằng lời khuyên tổng quan ấm áp, hướng tới tương lai tốt đẹp, nhấn mạnh sức mạnh nội tại riêng biệt của quý nhân.
+Hãy trả lời NGẮN (200-300 từ) theo cấu trúc:
 
-Nhớ: Quý nhân là cá thể duy nhất — luận giải phải phản ánh câu chuyện riêng của họ, không phải bài giảng chung chung.
+1. *1 câu bối cảnh Ghibli ngắn* — Mèo Vàng nhìn 3 lá bài.
+2. **Ấn tượng nhanh về dòng chảy** — Mỗi lá CHỈ 1-2 câu ngắn gọn nêu năng lượng nổi bật. Sau đó 1-2 câu kết nối mạch chảy tổng thể (Quá Khứ → Hiện Tại → Tương Lai). KHÔNG phân tích sâu — chỉ chia sẻ "cái nhìn đầu tiên".
+3. **2-3 câu hỏi CỤ THỂ, DỄ TRẢ LỜI** — Hỏi ngược quý nhân dựa trên những gì lá bài gợi ra. Câu hỏi phải khiến quý nhân TỰ NHIÊN muốn chia sẻ về tình huống thực tế của mình.
+
+Sau khi quý nhân trả lời, Mèo Vàng MỚI đào sâu phân tích chi tiết, áp dụng kỹ thuật Xoa-Đấm-Nâng, đưa lời khuyên cá nhân hóa.
 `;
   } else if (spreadType.type === 'celtic-cross') {
     const cardsList = cards
       .map(
         (c, idx) =>
-          `📍 **Lá số ${idx + 1} — ${c.position}:**\n${formatCardContext(c)}`
+          `📍 **Lá ${idx + 1} — ${c.position}:** ${formatCardContext(c)}`
       )
       .join('\n\n');
     return `
-Quý nhân đã chọn kiểu trải bài **Celtic Cross (Thập Tự Phương Tây — 10 Lá)** — kiểu trải bài sâu sắc nhất, toàn diện nhất, phơi bày toàn bộ bức tranh năng lượng cuộc đời.
+Quý nhân đã chọn kiểu trải bài **Celtic Cross (Thập Tự Phương Tây — 10 Lá)**.
 ${questionSection}
-Danh sách 10 lá bài đã rút và vị trí tương ứng:
+Danh sách 10 lá bài:
 
 ${cardsList}
 
-Hãy thực hiện một buổi luận giải Celtic Cross đẳng cấp theo phong cách Mèo Vàng Thảo Mai Chữa Lành, tổ chức thành các phần mạch lạc:
+**QUAN TRỌNG — LUẬN GIẢI THEO 2 GIAI ĐOẠN:**
 
-1. **🌀 Sơ Lược Tổng Quan:** Mở đầu bối cảnh Ghibli (*italics*) + cảm nhận trực giác đầu tiên của Mèo Vàng về năng lượng tổng thể 10 lá đối với câu hỏi/tình huống của quý nhân.
+Trong lần trả lời ĐẦU TIÊN này, CHỈ luận giải **Giai đoạn 1** (Phần 1 + Phần 2). Sau đó MỜI quý nhân yêu cầu tiếp Giai đoạn 2.
 
-2. **⚔️ Phân Khu Chữ Thập (The Cross — Trọng Tâm & Dòng Thời Gian):**
-   - **Tâm điểm (Lá 1 & Lá 2):** Phân tích sự tương tác giữa Tình huống hiện tại và Thách thức đè nén. Đây là nút thắt cốt lõi.
-   - **Gốc rễ & Bầu trời (Lá 3 & Lá 4):** Đối chiếu Ý thức (mong muốn rõ ràng) với Tiềm thức (động lực ngầm). Chỉ ra sự đồng điệu hay mâu thuẫn nội tâm.
-   - **Dòng chảy Thời Gian (Lá 5 & Lá 6):** Sự chuyển dịch từ Quá khứ gần sang Tương lai gần — bài học đã qua giúp gì cho cơ hội sắp tới?
+### Giai đoạn 1 — Tổng Quan & Chữ Thập (trả lời NGAY):
 
-3. **🌿 Phân Khu Cột Dọc (The Staff — Nội Tâm & Tác Động Ngoại Cảnh):**
-   - **Bản thân & Môi trường (Lá 7 & Lá 8):** Năng lượng nội tại vs. sức ép từ con người và hoàn cảnh bên ngoài.
-   - **Nỗi lòng & Đích đến (Lá 9 & Lá 10):** Giằng xé giữa Hy vọng/Nỗi sợ và Kết quả cuối cùng. Lá 10 là chìa khóa mở ra câu trả lời cho cả hành trình.
+1. **🌀 Sơ Lược Tổng Quan:** Mở đầu bối cảnh Ghibli (*italics*) + cảm nhận trực giác của Mèo Vàng về năng lượng tổng thể. Có thể dùng bảng Markdown tóm tắt 10 lá bài nếu phù hợp.
 
-4. **🐾 Lời Chữa Lành Của Mèo Vàng:** Đúc kết lời khuyên thiết thực, ấm áp, đậm phong cách Ghibli, thắp sáng hy vọng. Nhấn mạnh quý nhân là cá thể đặc biệt với sức mạnh nội tại riêng, có thể vượt qua mọi thách thức mà 10 lá bài đặt ra.
+2. **⚔️ Phân Khu Chữ Thập (Lá 1-6):**
+   - **Tâm điểm (Lá 1 & 2):** Nút thắt cốt lõi — Tình huống vs. Thách thức.
+   - **Ý thức & Tiềm thức (Lá 3 & 4):** Đồng điệu hay mâu thuẫn nội tâm?
+   - **Dòng thời gian (Lá 5 & 6):** Quá khứ gần → Tương lai gần.
 
-Hãy viết bằng giọng văn ấm áp, thông thái, chữa lành của chú Mèo Vàng, với emoji tinh tế và hợp lý. Mỗi lá bài nên có ít nhất 1 chi tiết hình ảnh RWS được nhắc đến.
+Kết thúc Giai đoạn 1 bằng lời mời: "Quý nhân muốn em tiếp tục đào sâu **Cột Dọc Nội Tâm** (Lá 7-10) và **Lời Chữa Lành đúc kết** không ạ? 🐱✨"
+
+### Giai đoạn 2 — Cột Dọc & Chữa Lành (CHỈ trả lời khi quý nhân YÊU CẦU):
+
+3. **🌿 Phân Khu Cột Dọc (Lá 7-10):**
+   - **Bản thân & Môi trường (Lá 7 & 8)**
+   - **Hy vọng/Nỗi sợ & Kết quả (Lá 9 & 10)**
+
+4. **🐾 Lời Chữa Lành Của Mèo Vàng:** Đúc kết + câu hỏi gợi mở.
+
+Tận dụng Markdown phong phú: bảng, danh sách, phân cách --- giữa các phần. Mỗi lá chỉ cần chọn thông điệp cốt lõi nhất, KHÔNG lan man.
 `;
   } else {
     // Dự phòng cho các kiểu trải bài khác trong tương lai
     const cardsList = cards
       .map(
         (c) =>
-          `- **Vị trí ${c.position}:**\n  ${formatCardContext(c)}`
+          `- **Vị trí ${c.position}:** ${formatCardContext(c)}`
       )
       .join('\n');
     return `
 Quý nhân đã chọn kiểu trải bài **"${spreadType.nameVi}"**.
 
-Danh sách các lá bài đã rút:
 ${cardsList}
 ${questionSection}
 Hãy luận giải theo phong cách Mèo Vàng Thảo Mai Chữa Lành:
-- Mở đầu bằng bối cảnh Ghibli (*italics*).
-- Phân tích sâu sắc từng lá bài với chi tiết hình ảnh RWS.
-- Tổng hợp mối liên hệ giữa các lá, kể câu chuyện tổng thể.
-- Áp dụng kỹ thuật Xoa-Đấm nhẹ-Nâng.
-- Kết thúc bằng lời chữa lành ấm áp hướng tới tương lai tốt đẹp.
-- Nhấn mạnh quý nhân là cá thể duy nhất — luận giải phải cá nhân hóa tối đa.
+- Mở đầu bằng 1-2 câu bối cảnh Ghibli (*italics*).
+- Chọn thông điệp cốt lõi nhất, phân tích sâu bằng kỹ thuật Xoa-Đấm nhẹ-Nâng.
+- Tận dụng Markdown phong phú (bảng, danh sách) để trình bày súc tích.
+- BẮT BUỘC kết thúc bằng 1-2 câu hỏi gợi mở khuyến khích quý nhân chia sẻ thêm.
 `;
   }
 }
@@ -321,7 +344,7 @@ export async function interpretCards(
         generationConfig: {
           temperature: 0.85,
           topP: 0.95,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 2048,
         },
       });
 
@@ -365,8 +388,7 @@ export async function continueTarotChat(
   apiKey: string,
   history: ChatMessage[],
   newMessage: string,
-  preferredModel?: string,
-  drawnCards?: InteractiveCard[]
+  preferredModel?: string
 ): Promise<{ reply: string; modelUsed: string }> {
   if (!apiKey) {
     throw new Error('API Key bị thiếu. Vui lòng kiểm tra lại cấu hình API Key ⚙️.');
@@ -374,40 +396,19 @@ export async function continueTarotChat(
 
   const genAI = new GoogleGenerativeAI(apiKey);
 
-  // Ánh xạ lịch sử chat sang định dạng của Gemini API (role: 'user' | 'model')
-  const contents = history.map((msg) => ({
+  const MAX_HISTORY_MESSAGES = 10;
+  const trimmedHistory = history.length > MAX_HISTORY_MESSAGES
+    ? history.slice(history.length - MAX_HISTORY_MESSAGES)
+    : history;
+
+  const contents = trimmedHistory.map((msg) => ({
     role: msg.role === 'user' ? 'user' : 'model',
     parts: [{ text: msg.content }],
   }));
 
-  // Tạo system context prefix chứa sơ đồ bài đối thoại hiện tại
-  let contextPrefix = '';
-  if (drawnCards && drawnCards.length > 0) {
-    contextPrefix = `[Hệ thống - Cập nhật bàn trải bài Tarot đối thoại]\nQuý nhân hiện đã rút được tổng cộng ${drawnCards.length} lá bài trên bàn đối thoại. Danh sách các lá bài và vai trò của chúng:\n`;
-    drawnCards.forEach((c, idx) => {
-      const parentText = c.parentNameVi ? ` (Bổ trợ/làm rõ cho lá "${c.parentNameVi}")` : '';
-      const roleText = c.customPositionName || (
-        c.role === 'core' ? 'Lá bài cốt lõi ban đầu' : 
-        c.role === 'clarifier' ? 'Lá bài làm rõ' : 
-        c.role === 'branch-a' ? 'Nhánh Lựa chọn A' : 
-        c.role === 'branch-b' ? 'Nhánh Lựa chọn B' : 
-        c.role === 'directional' ? 'Lá bài theo hướng nhìn' : 'Lời khuyên'
-      );
-      contextPrefix += `${idx + 1}. Lá **${c.card.nameVi} (${c.card.nameEn})** - Trạng thái: **${c.isReversed ? 'Ngược ↩' : 'Xuôi ✦'}** - Vai trò: **${roleText}**${parentText}\n`;
-    });
-    contextPrefix += `\nHãy ghi nhớ toàn bộ sơ đồ bài trên để thảo luận, đối thoại và giải nghĩa kết nối cực kỳ sâu sắc. Tổng số bài đã rút: ${drawnCards.length}/20 lá.\n\n`;
-  }
-
-  // Thêm tin nhắn mới của người dùng (chèn contextPrefix ẩn để AI nhận biết bàn trải bài)
-  const parts = [];
-  if (contextPrefix) {
-    parts.push({ text: contextPrefix });
-  }
-  parts.push({ text: newMessage });
-
   contents.push({
     role: 'user',
-    parts,
+    parts: [{ text: newMessage }],
   });
 
   const modelsToTry: string[] = [];
@@ -436,7 +437,7 @@ export async function continueTarotChat(
         generationConfig: {
           temperature: 0.85,
           topP: 0.95,
-          maxOutputTokens: 2548, // Dung lượng trả lời chat ngắn gọn, súc tích hơn
+          maxOutputTokens: 2048,
         },
       });
 

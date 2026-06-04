@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 
 export default function MeoVangIntroPage() {
-  const [activeTab, setActiveTab] = useState<'personality' | 'healing' | 'attic'>('personality');
+  const [activeTab, setActiveTab] = useState<'personality' | 'healing' | 'guide' | 'attic'>('personality');
 
   const tabs = [
     { id: 'personality', label: '🐱 Tính Cách Độc Bản', icon: '🐾' },
     { id: 'healing', label: '🌱 Giao Thức Chữa Lành', icon: '🔮' },
+    { id: 'guide', label: '📖 Cẩm Nang Đối Thoại', icon: '💬' },
     { id: 'attic', label: '🌿 Căn Gác Mái Ghibli', icon: '🏡' },
   ] as const;
 
@@ -166,6 +167,143 @@ export default function MeoVangIntroPage() {
                 <p className="text-sm text-text-primary leading-relaxed mt-2">
                   Em kết hợp linh hoạt kiến thức Tarot huyền học chuyên sâu với sự cá nhân hóa tối đa. Mỗi phiên giải bài là độc nhất vô nhị dành riêng cho bản thể của quý nhân ngày hôm đó.
                 </p>
+              </div>
+            )}
+
+            {/* GUIDE TAB */}
+            {activeTab === 'guide' && (
+              <div className="flex flex-col gap-5 animate-[fadeIn_0.3s_ease-out] font-lora">
+                <h3 className="font-cinzel text-lg text-gold-light font-bold">
+                  📖 Cẩm Nang Đối Thoại Chữa Lành Cùng Mèo Vàng
+                </h3>
+                
+                <p className="text-sm text-text-primary leading-relaxed">
+                  Để buổi trải bài mang lại giá trị chữa lành tốt nhất và tránh việc đoán mò mơ hồ, Mèo Vàng được thiết kế để <strong>tương tác qua lại liên tục</strong> với quý nhân. Dưới đây là những bí quyết giúp quý nhân trò chuyện hiệu quả nhất.
+                </p>
+
+                {/* 3 Steps */}
+                <div className="border-l-2 border-gold-primary/30 pl-4 ml-2 space-y-4 my-2">
+                  <div className="relative">
+                    <span className="absolute -left-[25px] top-0 flex items-center justify-center w-5 h-5 rounded-full bg-gold-primary text-bg-deep font-sans text-[10px] font-bold">
+                      1
+                    </span>
+                    <h4 className="font-sans font-bold text-xs text-gold-light uppercase tracking-widest pl-2">
+                      Xem Phân Tích Ban Đầu
+                    </h4>
+                    <p className="text-xs text-text-secondary leading-relaxed pl-2 mt-1">
+                      Mèo Vàng sẽ bắt đầu bằng một lời luận giải ngắn gọn, cô đọng về ý nghĩa các lá bài và đặt câu hỏi gợi mở cho tình huống của bạn.
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute -left-[25px] top-0 flex items-center justify-center w-5 h-5 rounded-full bg-gold-primary text-bg-deep font-sans text-[10px] font-bold">
+                      2
+                    </span>
+                    <h4 className="font-sans font-bold text-xs text-gold-light uppercase tracking-widest pl-2">
+                      Chia Sẻ Thực Tế (Khuyên Dùng)
+                    </h4>
+                    <p className="text-xs text-text-secondary leading-relaxed pl-2 mt-1">
+                      Thay vì trả lời "Vâng" hoặc im lặng, hãy trả lời câu hỏi của Mèo Vàng bằng cách chia sẻ thêm về hoàn cảnh, cảm xúc hoặc suy nghĩ hiện tại của bạn.
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute -left-[25px] top-0 flex items-center justify-center w-5 h-5 rounded-full bg-gold-primary text-bg-deep font-sans text-[10px] font-bold">
+                      3
+                    </span>
+                    <h4 className="font-sans font-bold text-xs text-gold-light uppercase tracking-widest pl-2">
+                      Đưa Ra Câu Hỏi Đào Sâu
+                    </h4>
+                    <p className="text-xs text-text-secondary leading-relaxed pl-2 mt-1">
+                      Tiếp tục hỏi Mèo Vàng về những khía cạnh cụ thể bạn muốn làm rõ dựa trên các lá bài đã rút.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Good vs Bad Examples */}
+                <div className="my-2 bg-gold-primary/5 border border-gold-primary/10 rounded-xl p-4">
+                  <h4 className="text-xs font-sans font-bold text-gold-light uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    💡 Bí Quyết Trò Chuyện Hiệu Quả
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-3 bg-red-500/5 border border-red-500/15 rounded-lg">
+                      <span className="text-red-400 text-xs font-sans font-bold uppercase tracking-wider block mb-1">❌ Hạn Chế Hỏi Thế Này:</span>
+                      <p className="text-xs text-text-secondary italic">"Khi nào em có người yêu?"</p>
+                      <p className="text-[11px] text-text-secondary/70 mt-1">
+                        (Mèo Vàng sẽ phải đoán mò và đưa ra lời khuyên chung chung vì thiếu dữ kiện thực tế).
+                      </p>
+                    </div>
+                    <div className="p-3 bg-green-500/5 border border-green-500/15 rounded-lg">
+                      <span className="text-green-400 text-xs font-sans font-bold uppercase tracking-wider block mb-1">✅ Nên Trò Chuyện Thế Này:</span>
+                      <p className="text-xs text-text-secondary italic">"Em đang độc thân 2 năm, ngại giao tiếp và hơi sợ tổn thương..."</p>
+                      <p className="text-[11px] text-text-secondary/70 mt-1">
+                        (Mèo Vàng sẽ bám sát tâm lý và đưa ra các bước gỡ rối cụ thể phù hợp nhất với bạn).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Formatting features */}
+                <div className="my-1 bg-[#1a1a3a]/40 border border-gold-primary/10 rounded-xl p-4 flex flex-col gap-2.5">
+                  <h4 className="text-xs font-sans font-bold text-gold-light uppercase tracking-widest flex items-center gap-1.5">
+                    🎨 Yêu Cầu Định Dạng Đặc Biệt
+                  </h4>
+                  <p className="text-xs text-text-secondary leading-relaxed">
+                    Mèo Vàng rất thích hỗ trợ quý nhân bằng các định dạng trực quan. Quý nhân có thể yêu cầu Mèo Vàng xuất kết quả dưới dạng đặc biệt:
+                  </p>
+                  <ul className="space-y-1.5 text-[11px] text-text-secondary list-disc list-inside">
+                    <li><strong className="text-gold-light">Bảng so sánh Markdown:</strong> Đối chiếu các lựa chọn, hướng đi.</li>
+                    <li><strong className="text-gold-light">Bản đồ HTML/CSS:</strong> Vẽ biểu đồ cột mốc, lộ trình phát triển.</li>
+                    <li><strong className="text-gold-light">Danh sách nhiệm vụ (Checklist):</strong> Các hành động cụ thể cần thực hiện ngay.</li>
+                  </ul>
+                  <div className="mt-1 p-2.5 bg-bg-deep/50 rounded-lg border border-gold-primary/5">
+                    <span className="text-[10px] font-sans font-bold text-gold-dark uppercase tracking-widest block mb-1">💡 Câu Lệnh Gợi Ý Cho Quý Nhân:</span>
+                    <p className="text-xs text-text-secondary italic">"Hãy vẽ lộ trình 3 tháng tới của em bằng một bảng Markdown nhé miêu miêu."</p>
+                  </div>
+                </div>
+
+                {/* Chế Độ Trải Bài Đối Thoại Động (Đặc Biệt - Nhặt Bài Rẽ Nhánh) */}
+                <div className="my-2 border-t border-gold-primary/10 pt-5 flex flex-col gap-3">
+                  <h4 className="font-cinzel text-sm text-gold-light font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    🔮 Chế Độ Đặc Biệt: Bàn Bài Đối Thoại Động & Nhặt Bài Rẽ Nhánh
+                  </h4>
+                  <p className="text-xs text-text-primary leading-relaxed">
+                    Đây là không gian Tarot chuyên nghiệp tối tân tại <Link href="/reading/interactive" className="text-gold-light font-semibold hover:underline">Đối Thoại & Nhặt Bài Động cùng Mèo Vàng</Link>. Khác với trải bài tĩnh thông thường, chế độ đặc biệt này cho phép quý nhân <strong>trao đổi hai chiều liên tục</strong> và <strong>nhặt bài bổ trợ rẽ nhánh</strong> để tháo gỡ từng nút thắt vấn đề:
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                    <div className="p-3.5 bg-gold-primary/5 border border-gold-primary/15 rounded-xl flex flex-col gap-1.5">
+                      <strong className="text-xs text-gold-light font-sans uppercase tracking-wider block">💬 Đối Thoại Hai Chiều Liên Tục</strong>
+                      <p className="text-[11px] text-text-secondary leading-relaxed">
+                        Mèo Vàng sẽ không độc thoại đọc giải nghĩa dài dòng vô lý. Em đưa ra ấn tượng đầu tiên súc tích và luôn hỏi ngược quý nhân. Quý nhân hãy cởi mở tâm sự phản hồi liên tục để Mèo Vàng bám sát tâm sự thực tế và đưa ra chỉ dẫn chính xác nhất.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 bg-gold-primary/5 border border-gold-primary/15 rounded-xl flex flex-col gap-1.5">
+                      <strong className="text-xs text-gold-light font-sans uppercase tracking-wider block">🌿 Nhặt Lá Bài Bổ Trợ Mới Tùy Ý</strong>
+                      <p className="text-[11px] text-text-secondary leading-relaxed">
+                        Khi gặp bế tắc hoặc phân vân, quý nhân chỉ cần click chọn một lá bài trên bàn làm <strong>Lá Bài Gốc (Parent)</strong>, sau đó nhấp các nút chức năng phía dưới khung chat để nhặt thêm lá bài mới làm rõ năng lượng:
+                      </p>
+                      <ul className="text-[10px] text-text-secondary list-disc list-inside space-y-0.5 pl-1 mt-1">
+                        <li><span className="text-[#4cc9f0] font-bold">Lá bài làm rõ (Clarifier):</span> Giải mã năng lượng mập mờ.</li>
+                        <li><span className="text-[#f4a261] font-bold">Nhánh lựa chọn A/B:</span> Phân tích so sánh 2 hướng đi đối nghịch.</li>
+                        <li><span className="text-green-400 font-bold">Lời khuyên của Mèo (Advice):</span> Định hướng giải pháp chữa lành tích cực.</li>
+                      </ul>
+                    </div>
+
+                    <div className="p-3.5 bg-gold-primary/5 border border-gold-primary/15 rounded-xl flex flex-col gap-1.5">
+                      <strong className="text-xs text-gold-light font-sans uppercase tracking-wider block">🕹️ Kéo Thả, Xoay & Khóa Bài Tự Do</strong>
+                      <p className="text-[11px] text-text-secondary leading-relaxed">
+                        Quý nhân hoàn toàn làm chủ bàn bài Tarot: tự do kéo thả sắp xếp các quân bài, xoay góc nghiêng tùy thích, hoặc bấm nút 🔒 để khóa vị trí lá bài nhằm giữ bố cục mạng lưới kết nối năng lượng sạch sẽ, trực quan.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 bg-gold-primary/5 border border-gold-primary/15 rounded-xl flex flex-col gap-1.5">
+                      <strong className="text-xs text-gold-light font-sans uppercase tracking-wider block">🧭 Thu Phóng 300% & Mắt Điều Hướng</strong>
+                      <p className="text-[11px] text-text-secondary leading-relaxed">
+                        Thu phóng (zoom) bàn bài tự do lên tới 300% để ngắm tranh. Sử dụng bộ điều hướng D-PAD (▲, ▼, ◀, ▶) và nút Căn Giữa 🎯 để định vị tầm nhìn. Click đúp vào lá bài để mở trình ngắm tranh chi tiết toàn màn hình (thanh menu của web sẽ tự động ẩn đi để quý nhân chìm đắm hoàn toàn).
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

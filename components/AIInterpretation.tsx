@@ -33,12 +33,16 @@ export default function AIInterpretation({
   const [inputValue, setInputValue] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
+  const [showChat, setShowChat] = useState(true); // Tự động mở chat vì Mèo Vàng luôn hỏi ngược
 
+  // Gợi ý giúp người dùng TRẢ LỜI câu hỏi của Mèo Vàng — thay vì hỏi ngược
   const SUGGESTION_CHIPS = [
-    { text: '💡 Mèo Vàng lý giải thêm giúp em về lời khuyên hành động lúc này với ạ?' },
-    { text: '🌱 Có bài học ẩn giấu nào trong bối cảnh này mà em chưa thấy không miêu miêu?' },
-    { text: '🔮 Có cách nào giúp em giải tỏa năng lượng ách tắc, áp lực hiện tại không?' },
-    { text: '🐱 Em đang cảm thấy hơi lo lắng về tương lai, Mèo Vàng an ủi em được không...' }
+    { text: '💕 Em đang độc thân và muốn tìm hiểu về tình yêu', emoji: '💕' },
+    { text: '💼 Em đang lo lắng về công việc hiện tại', emoji: '💼' },
+    { text: '😔 Dạo này em cảm thấy khá mệt mỏi và chán nản...', emoji: '😔' },
+    { text: '🤔 Em đang phân vân giữa hai lựa chọn quan trọng', emoji: '🤔' },
+    { text: '✨ Mèo Vàng phân tích sâu hơn giúp em nhé!', emoji: '✨' },
+    { text: '🌱 Em muốn biết mình nên làm gì tiếp theo', emoji: '🌱' },
   ];
 
   // Reset typewriter & chat history when new interpretation arrives (i.e. user draws another spread)
@@ -50,6 +54,7 @@ export default function AIInterpretation({
     setInputValue('');
     setChatLoading(false);
     setChatError('');
+    setShowChat(true);
   }, [interpretation]);
 
   // Typewriter effect interval
@@ -102,6 +107,9 @@ ${interpretation}
   const handleSendChatMessage = async (messageText: string) => {
     if (!messageText.trim() || chatLoading || !apiKey) return;
 
+    // Tự động mở chat khi gửi tin nhắn
+    if (!showChat) setShowChat(true);
+
     setChatError('');
     setChatLoading(true);
 
@@ -138,65 +146,250 @@ ${interpretation}
     }
   };
 
-  // Parser Markdown đơn giản để hiển thị in đậm và xuống dòng đẹp mắt
+  // ═══════════════════════════════════════════════════════════════
+  // RICH MARKDOWN PARSER — Hỗ trợ bảng, italic, list, hr, bold
+  // ═══════════════════════════════════════════════════════════════
+
+  /** Parse inline markdown: **bold**, *italic*, `code` */
+  const renderInlineMarkdown = (text: string, keyPrefix: string = '') => {
+    // Combined regex: **bold**, *italic*, `code`
+    const inlineRegex = /(\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`)/g;
+    const parts: (string | React.ReactElement)[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = inlineRegex.exec(text)) !== null) {
+      // Text before match
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+
+      if (match[2]) {
+        // **bold**
+        parts.push(
+          <strong key={`${keyPrefix}-b-${match.index}`} className="text-gold-light font-bold">
+            {match[2]}
+          </strong>
+        );
+      } else if (match[3]) {
+        // *italic*
+        parts.push(
+          <em key={`${keyPrefix}-i-${match.index}`} className="italic text-text-primary/85">
+            {match[3]}
+          </em>
+        );
+      } else if (match[4]) {
+        // `code`
+        parts.push(
+          <code key={`${keyPrefix}-c-${match.index}`} className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gold-light text-xs font-mono">
+            {match[4]}
+          </code>
+        );
+      }
+
+      lastIndex = inlineRegex.lastIndex;
+    }
+
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : [text];
+  };
+
+  /** Detect and parse a markdown table block */
+  const tryParseTable = (lines: string[], startIdx: number): { element: React.ReactElement; consumed: number } | null => {
+    // A table needs at least 3 lines: header, separator, row
+    if (startIdx + 2 >= lines.length) return null;
+
+    const headerLine = lines[startIdx].trim();
+    const separatorLine = lines[startIdx + 1].trim();
+
+    // Check if this looks like a table header + separator
+    if (!headerLine.includes('|') || !separatorLine.match(/^\|?[\s\-:|]+\|/)) return null;
+
+    const parseRow = (line: string) => {
+      return line.split('|').map(cell => cell.trim()).filter((cell, idx, arr) => {
+        // Remove empty leading/trailing cells from | ... |
+        if (idx === 0 && cell === '') return false;
+        if (idx === arr.length - 1 && cell === '') return false;
+        return true;
+      });
+    };
+
+    const headers = parseRow(headerLine);
+    if (headers.length === 0) return null;
+
+    // Parse alignment from separator
+    const sepCells = parseRow(separatorLine);
+    const alignments = sepCells.map(cell => {
+      if (cell.startsWith(':') && cell.endsWith(':')) return 'center' as const;
+      if (cell.endsWith(':')) return 'right' as const;
+      return 'left' as const;
+    });
+
+    // Parse body rows
+    const bodyRows: string[][] = [];
+    let rowIdx = startIdx + 2;
+    while (rowIdx < lines.length && lines[rowIdx].trim().includes('|') && lines[rowIdx].trim() !== '') {
+      bodyRows.push(parseRow(lines[rowIdx].trim()));
+      rowIdx++;
+    }
+
+    if (bodyRows.length === 0) return null;
+
+    const element = (
+      <div key={`table-${startIdx}`} className="overflow-x-auto my-3 rounded-xl border border-gold-primary/15">
+        <table className="w-full text-xs md:text-sm font-lora border-collapse">
+          <thead>
+            <tr className="bg-gold-primary/8 border-b border-gold-primary/20">
+              {headers.map((header, hIdx) => (
+                <th
+                  key={hIdx}
+                  className="px-3 py-2.5 text-gold-light font-bold text-left tracking-wide"
+                  style={{ textAlign: alignments[hIdx] || 'left' }}
+                >
+                  {renderInlineMarkdown(header, `th-${startIdx}-${hIdx}`)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bodyRows.map((row, rIdx) => (
+              <tr key={rIdx} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                {headers.map((_, cIdx) => (
+                  <td
+                    key={cIdx}
+                    className="px-3 py-2 text-text-primary"
+                    style={{ textAlign: alignments[cIdx] || 'left' }}
+                  >
+                    {renderInlineMarkdown(row[cIdx] || '', `td-${startIdx}-${rIdx}-${cIdx}`)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+
+    return { element, consumed: rowIdx - startIdx };
+  };
+
+  /** Main markdown parser */
   const renderParsedMarkdown = (text: string) => {
     if (!text) return null;
 
-    // Tách dòng
     const lines = text.split('\n');
+    const elements: React.ReactElement[] = [];
+    let i = 0;
 
-    return lines.map((line, idx) => {
-      // Xử lý tiêu đề phụ dạng markdown (ví dụ: ### Tiêu đề)
-      if (line.trim().startsWith('###')) {
-        const cleanTitle = line.replace(/###/g, '').trim();
-        return (
-          <h4 key={idx} className="font-cinzel text-base text-gold-light font-bold mt-4 mb-2 tracking-wide">
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      // ─── Horizontal Rule ───
+      if (trimmed.match(/^(-{3,}|\*{3,}|_{3,})$/)) {
+        elements.push(
+          <hr key={`hr-${i}`} className="border-0 h-px bg-gradient-to-r from-transparent via-gold-primary/25 to-transparent my-4" />
+        );
+        i++;
+        continue;
+      }
+
+      // ─── Table ───
+      const tableResult = tryParseTable(lines, i);
+      if (tableResult) {
+        elements.push(tableResult.element);
+        i += tableResult.consumed;
+        continue;
+      }
+
+      // ─── Heading ### ───
+      if (trimmed.startsWith('###')) {
+        const cleanTitle = trimmed.replace(/^###\s*/, '');
+        elements.push(
+          <h4 key={`h3-${i}`} className="font-cinzel text-base text-gold-light font-bold mt-4 mb-2 tracking-wide">
+            {renderInlineMarkdown(cleanTitle, `h3-${i}`)}
+          </h4>
+        );
+        i++;
+        continue;
+      }
+
+      // ─── Standalone Bold Title (e.g. **Title**) ───
+      if (trimmed.startsWith('**') && trimmed.endsWith('**') && trimmed.length < 80 && !trimmed.slice(2, -2).includes('**')) {
+        const cleanTitle = trimmed.slice(2, -2);
+        elements.push(
+          <h4 key={`bt-${i}`} className="font-sans font-extrabold text-sm text-gold-light uppercase tracking-widest mt-4 mb-1.5">
             {cleanTitle}
           </h4>
         );
+        i++;
+        continue;
       }
 
-      // Xử lý tiêu đề phụ khác (ví dụ: **Tiêu đề**)
-      if (line.trim().startsWith('**') && line.trim().endsWith('**') && line.length < 50) {
-        const cleanTitle = line.replace(/\*\*/g, '').trim();
-        return (
-          <h4 key={idx} className="font-sans font-extrabold text-sm text-gold-light uppercase tracking-widest mt-4 mb-1.5">
-            {cleanTitle}
-          </h4>
-        );
-      }
-
-      // Xử lý in đậm xen kẽ (ví dụ: **chữ in đậm** thường)
-      const boldRegex = /\*\*([^*]+)\*\*/g;
-      let parts = [];
-      let lastIndex = 0;
-      let match;
-
-      while ((match = boldRegex.exec(line)) !== null) {
-        // Thêm phần chữ thường trước in đậm
-        if (match.index > lastIndex) {
-          parts.push(line.substring(lastIndex, match.index));
+      // ─── Unordered List ───
+      if (trimmed.match(/^[-*]\s+/)) {
+        const listItems: { content: string; indent: number }[] = [];
+        while (i < lines.length && lines[i].trim().match(/^[-*]\s+/)) {
+          const indent = lines[i].search(/\S/);
+          const content = lines[i].trim().replace(/^[-*]\s+/, '');
+          listItems.push({ content, indent });
+          i++;
         }
-        // Thêm phần in đậm
-        parts.push(
-          <strong key={match.index} className="text-gold-light font-bold">
-            {match[1]}
-          </strong>
+        elements.push(
+          <ul key={`ul-${i}`} className="my-2 space-y-1.5 pl-1">
+            {listItems.map((item, lIdx) => (
+              <li key={lIdx} className="flex items-start gap-2 text-sm text-text-primary font-lora leading-relaxed" style={{ paddingLeft: `${Math.min(item.indent, 4) * 8}px` }}>
+                <span className="text-gold-primary/60 mt-1.5 text-[6px] flex-shrink-0">●</span>
+                <span>{renderInlineMarkdown(item.content, `li-${i}-${lIdx}`)}</span>
+              </li>
+            ))}
+          </ul>
         );
-        lastIndex = boldRegex.lastIndex;
+        continue;
       }
 
-      if (lastIndex < line.length) {
-        parts.push(line.substring(lastIndex));
+      // ─── Ordered List ───
+      if (trimmed.match(/^\d+\.\s+/)) {
+        const listItems: string[] = [];
+        while (i < lines.length && lines[i].trim().match(/^\d+\.\s+/)) {
+          listItems.push(lines[i].trim().replace(/^\d+\.\s+/, ''));
+          i++;
+        }
+        elements.push(
+          <ol key={`ol-${i}`} className="my-2 space-y-1.5 pl-1">
+            {listItems.map((item, lIdx) => (
+              <li key={lIdx} className="flex items-start gap-2.5 text-sm text-text-primary font-lora leading-relaxed">
+                <span className="text-gold-light/70 font-bold text-xs mt-0.5 flex-shrink-0 w-5 text-right">{lIdx + 1}.</span>
+                <span>{renderInlineMarkdown(item, `ol-${i}-${lIdx}`)}</span>
+              </li>
+            ))}
+          </ol>
+        );
+        continue;
       }
 
-      return (
-        <p key={idx} className="text-text-primary text-sm leading-relaxed mb-3 font-lora">
-          {parts.length > 0 ? parts : line}
+      // ─── Empty line ───
+      if (trimmed === '') {
+        i++;
+        continue;
+      }
+
+      // ─── Regular paragraph ───
+      elements.push(
+        <p key={`p-${i}`} className="text-text-primary text-sm leading-relaxed mb-3 font-lora">
+          {renderInlineMarkdown(trimmed, `p-${i}`)}
         </p>
       );
-    });
+      i++;
+    }
+
+    return elements;
   };
+
+  const isTypewriterDone = currentIndex >= (interpretation || '').length;
 
   return (
     <div
@@ -279,27 +472,58 @@ ${interpretation}
             </div>
           </div>
 
-          {/* Text block */}
-          <div className="font-lora text-sm text-text-primary whitespace-pre-wrap leading-relaxed pr-1">
+          {/* Text block with rich markdown */}
+          <div className="text-sm text-text-primary leading-relaxed pr-1">
             {renderParsedMarkdown(displayText)}
             {/* Blinking cursor at the end of typewriter */}
-            {currentIndex < (interpretation || '').length && (
+            {!isTypewriterDone && (
               <span className="inline-block w-1.5 h-4 bg-gold-light ml-0.5 animate-[pulse_1s_infinite] align-middle" />
             )}
           </div>
           
           {/* Complete Ghibli signature */}
-          {currentIndex >= (interpretation || '').length && (
+          {isTypewriterDone && (
             <div className="mt-2 text-right text-[11px] font-lora italic text-gold-light/60 border-t border-gold-primary/5 pt-3">
               Chúc bạn vạn dặm bình yên, thương mến từ Mèo Vàng. 🐱🍂
             </div>
           )}
 
-          {/* ════════════════ Trò chuyện tiếp nối với Mèo Vàng ════════════════ */}
-          {currentIndex >= (interpretation || '').length && apiKey && (
-            <div className="flex flex-col gap-5 border-t border-gold-primary/10 mt-6 pt-6 animate-[fadeIn_0.4s_ease-out]">
-              <div className="flex items-center gap-2 text-xs font-sans text-gold-light/75 uppercase tracking-widest font-bold">
-                <span>💬 Trò Chuyện Tiếp Nối Cùng Mèo Vàng</span>
+          {/* ════════════════ Toggle nút mở Chat ════════════════ */}
+          {isTypewriterDone && apiKey && !showChat && (
+            <div className="flex flex-col items-center gap-3 mt-2 animate-[fadeIn_0.5s_ease-out]">
+              <button
+                onClick={() => setShowChat(true)}
+                className="group relative flex items-center gap-3 px-6 py-3 rounded-2xl bg-gradient-to-r from-gold-primary/10 to-gold-primary/5 hover:from-gold-primary/20 hover:to-gold-primary/10 border border-gold-primary/25 hover:border-gold-light/50 text-gold-light cursor-pointer transition-all duration-300 shadow-[0_0_20px_rgba(244,162,97,0.08)] hover:shadow-[0_0_30px_rgba(244,162,97,0.18)] active:scale-[0.97]"
+              >
+                <span className="text-xl group-hover:scale-110 transition-transform">🐱</span>
+                <div className="flex flex-col items-start">
+                  <span className="text-xs md:text-sm font-sans font-bold tracking-wide">
+                    Trò chuyện tiếp với Mèo Vàng
+                  </span>
+                  <span className="text-[10px] font-lora text-gold-light/55 italic">
+                    Trả lời Mèo Vàng, chia sẻ tâm sự, hoặc yêu cầu phân tích sâu hơn...
+                  </span>
+                </div>
+                <span className="text-sm opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all">💬</span>
+              </button>
+            </div>
+          )}
+
+          {/* ════════════════ Khu vực Chat (ẩn mặc định) ════════════════ */}
+          {isTypewriterDone && apiKey && showChat && (
+            <div className="flex flex-col gap-5 border-t border-gold-primary/10 mt-4 pt-5 animate-[fadeIn_0.4s_ease-out]">
+              {/* Header chat + nút ẩn */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-sans text-gold-light/75 uppercase tracking-widest font-bold">
+                  <span>💬 Trò Chuyện Cùng Mèo Vàng</span>
+                </div>
+                <button
+                  onClick={() => setShowChat(false)}
+                  className="px-2.5 py-1 text-[10px] font-sans font-semibold rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-gold-primary/30 text-text-secondary hover:text-gold-light transition-all cursor-pointer"
+                  title="Thu gọn khu vực trò chuyện"
+                >
+                  ▲ Thu gọn
+                </button>
               </div>
 
               {/* Lịch sử tin nhắn phụ */}
@@ -361,24 +585,44 @@ ${interpretation}
               {/* Scroll Anchor */}
               <div ref={chatEndRef} />
 
-              {/* Gợi ý câu hỏi nhanh (Smart Suggestion Chips) */}
-              {!chatLoading && (
-                <div className="flex flex-col gap-2 mt-1">
-                  <span className="text-[10px] font-sans font-bold uppercase tracking-widest text-gold-light/40 pl-1">
-                    ✨ Gợi ý câu hỏi nhanh cho quý nhân:
+              {/* Gợi ý câu hỏi nhanh (Smart Suggestion Chips) — chỉ hiện khi chưa có follow-up */}
+              {!chatLoading && followUps.length === 0 && (
+                <div className="flex flex-col gap-2.5 mt-1">
+                  <span className="text-[10px] font-sans font-bold uppercase tracking-widest text-gold-light/45 pl-1">
+                    🐱 Mèo Vàng đang muốn hiểu bạn hơn! Chia sẻ bằng cách chọn hoặc gõ:
                   </span>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {SUGGESTION_CHIPS.map((chip, idx) => (
                       <button
                         key={idx}
                         type="button"
                         onClick={() => handleSendChatMessage(chip.text)}
-                        className="text-left px-3 py-2 text-[11px] md:text-xs font-sans font-semibold rounded-xl bg-gold-primary/5 hover:bg-gold-primary/10 border border-gold-primary/20 hover:border-gold-primary/45 text-gold-light/95 hover:text-gold-light transition-all cursor-pointer select-none active:scale-95 shadow-sm max-w-full truncate"
+                        className="text-left px-3.5 py-2.5 text-[11px] md:text-xs font-sans font-semibold rounded-xl bg-gold-primary/5 hover:bg-gold-primary/12 border border-gold-primary/15 hover:border-gold-primary/40 text-gold-light/90 hover:text-gold-light transition-all cursor-pointer select-none active:scale-[0.97] shadow-sm"
                       >
                         {chip.text}
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Gợi ý tiếp tục sau khi đã chat — chỉ 2 gợi ý phổ biến */}
+              {!chatLoading && followUps.length > 0 && followUps.length % 2 === 0 && (
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage('✨ Mèo Vàng giải thích thêm giúp em nhé!')}
+                    className="text-left px-3 py-2 text-[11px] font-sans font-semibold rounded-xl bg-gold-primary/5 hover:bg-gold-primary/10 border border-gold-primary/15 hover:border-gold-primary/35 text-gold-light/80 hover:text-gold-light transition-all cursor-pointer select-none active:scale-[0.97]"
+                  >
+                    ✨ Giải thích thêm
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage('🌱 Em nên hành động cụ thể thế nào?')}
+                    className="text-left px-3 py-2 text-[11px] font-sans font-semibold rounded-xl bg-gold-primary/5 hover:bg-gold-primary/10 border border-gold-primary/15 hover:border-gold-primary/35 text-gold-light/80 hover:text-gold-light transition-all cursor-pointer select-none active:scale-[0.97]"
+                  >
+                    🌱 Lời khuyên hành động
+                  </button>
                 </div>
               )}
 
@@ -399,7 +643,7 @@ ${interpretation}
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   disabled={chatLoading}
-                  placeholder="Hỏi thêm Mèo Vàng về trải bài này... (ví dụ: Lời khuyên này có nghĩa gì với công việc mới?)"
+                  placeholder="Chia sẻ cảm xúc hoặc hỏi thêm Mèo Vàng..."
                   className="flex-1 bg-[#1b1b3d]/50 border border-gold-primary/20 focus:border-gold-light focus:outline-none rounded-xl px-4 py-2.5 text-xs md:text-sm text-[#ffd166] placeholder:text-text-secondary/35 transition-all font-sans"
                 />
                 <button

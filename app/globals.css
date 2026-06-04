@@ -294,4 +294,10 @@
   animation: fogDrift 20s ease infinite;
 }
 
+/* Ẩn thanh menu toàn trang khi ngắm lá bài chi tiết */
+body.inspector-open nav {
+  display: none !important;
+}
+
+
 

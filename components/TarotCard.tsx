@@ -68,10 +68,10 @@ export default function TarotCard({
 
         {/* MẶT TRƯỚC LÁ BÀI (Hiện khi rotateY = 180, lật ngược trục Y) */}
         <div
-          className="absolute inset-0 w-full h-full backface-hidden bg-bg-surface border-2 border-gold-primary/50 flex flex-col justify-between overflow-hidden"
+          className="absolute inset-0 w-full h-full backface-hidden flex flex-col justify-between overflow-hidden"
           style={{
             transform: 'rotateY(180deg)',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(244, 162, 97, 0.1)',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
             borderRadius: size === 'sm' ? '8px' : size === 'md' ? '12px' : '16px',
           }}
         >
@@ -82,15 +82,13 @@ export default function TarotCard({
                 isReversed ? 'rotate-180' : ''
               }`}
             >
-              {/* Gold border frame overlay */}
-              <div className="absolute inset-1 border border-gold-light/20 z-10 rounded-[inherit] pointer-events-none" />
-
               <Image
                 src={card.imagePath}
                 alt={`${card.nameVi} (${card.nameEn}) ${isReversed ? '- Chiều Ngược' : '- Chiều Xuôi'}`}
                 fill
-                sizes="(max-width: 640px) 150px, 300px"
-                className="object-cover"
+                quality={95}
+                sizes="(max-width: 640px) 240px, (max-width: 1024px) 320px, 440px"
+                className="object-contain"
                 priority={size === 'lg' || size === 'xl'}
               />
 

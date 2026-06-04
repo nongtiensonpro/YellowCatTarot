@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { useApiKey } from '@/components/ApiKeyProvider';
 import { useEntropyCollector } from '@/hooks/useEntropyCollector';
 import { TarotCard as TarotCardType, tarotCards, getCardById } from '@/lib/cards-data';
-import { continueTarotChat, ChatMessage, InteractiveCard } from '@/lib/gemini';
+import { continueTarotChat, ChatMessage, InteractiveCard } from '@/lib/gemini-interactive';
 import {
   createNewDeck,
   prepareFaceDownCards,
@@ -18,6 +18,8 @@ import {
 import CardDeck from '@/components/CardDeck';
 import InteractiveTarotBoard from '@/components/InteractiveTarotBoard';
 import { YellowCatState } from '@/components/YellowCat';
+import CardInspector from '@/components/CardInspector';
+import Markdown from '@/components/Markdown';
 
 const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
   ssr: false,
@@ -59,12 +61,28 @@ export default function InteractiveReadingPage() {
   const [selectedRole, setSelectedRole] = useState<'clarifier' | 'branch-a' | 'branch-b' | 'directional' | 'advice'>('clarifier');
   const [customPositionName, setCustomPositionName] = useState('');
 
+  // Detailed card inspector states
+  const [inspectorCard, setInspectorCard] = useState<TarotCardType | null>(null);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory, typedReply, isTyping]);
+
+  // Sync selected parent card slug when drawnCards changes
+  useEffect(() => {
+    if (drawnCards.length > 0) {
+      const parentStillExists = drawnCards.some((c) => c.card.slug === selectedParentSlug);
+      if (!selectedParentSlug || !parentStillExists) {
+        setSelectedParentSlug(drawnCards[drawnCards.length - 1].card.slug);
+      }
+    } else {
+      setSelectedParentSlug('');
+    }
+  }, [drawnCards, selectedParentSlug]);
 
   // Handle Mèo Vàng voice & state bubbles
   const getCatProps = (): { state: YellowCatState; speech: string } => {
@@ -235,9 +253,9 @@ export default function InteractiveReadingPage() {
       // Build first prompt content
       let promptText = '';
       if (initialMode === 'single') {
-        promptText = `Chào Mèo Vàng, đây là bắt đầu Chế độ Đối thoại Nâng cao. Quý nhân đã rút ra lá bài cốt lõi đầu tiên:\n- Lá bài: ${currentCards[0].card.nameVi} (${currentCards[0].isReversed ? 'Ngược' : 'Xuôi'}). Câu hỏi: "${userQuestion}"`;
+        promptText = `Chào Mèo Vàng, đây là bắt đầu Chế độ Đối thoại Nâng cao. Quý nhân đã rút ra lá bài cốt lõi đầu tiên:\n- Lá bài: ${currentCards[0].card.nameVi} (${currentCards[0].isReversed ? 'Ngược' : 'Xuôi'}). Câu hỏi: "${userQuestion}"\nMèo Vàng hãy chia sẻ ấn tượng đầu tiên cực kỳ ngắn gọn (đúng giới hạn 120-180 từ), tuyệt đối tránh đoán mò và kết thúc bằng câu hỏi cụ thể để khơi gợi trò chuyện nhé!`;
       } else {
-        promptText = `Chào Mèo Vàng, đây là bắt đầu Chế độ Đối thoại Nâng cao. Quý nhân đã trải 3 lá bài cốt lõi (Quá khứ, Hiện tại, Tương lai):\n${currentCards.map((c) => `- Vị trí ${c.customPositionName}: ${c.card.nameVi} (${c.isReversed ? 'Ngược' : 'Xuôi'})`).join('\n')}. Câu hỏi: "${userQuestion}"`;
+        promptText = `Chào Mèo Vàng, đây là bắt đầu Chế độ Đối thoại Nâng cao. Quý nhân đã trải 3 lá bài cốt lõi (Quá khứ, Hiện tại, Tương lai):\n${currentCards.map((c) => `- Vị trí ${c.customPositionName}: ${c.card.nameVi} (${c.isReversed ? 'Ngược' : 'Xuôi'})`).join('\n')}. Câu hỏi: "${userQuestion}"\nMèo Vàng hãy chia sẻ ấn tượng đầu tiên cực kỳ ngắn gọn (đúng giới hạn 200-300 từ), kết nối 3 lá và kết thúc bằng câu hỏi cụ thể để bắt đầu cuộc trò chuyện nhé!`;
       }
 
       const response = await continueTarotChat(apiKey, [], promptText, undefined, currentCards);
@@ -387,12 +405,13 @@ export default function InteractiveReadingPage() {
         content: `*Mèo Vàng tròn xoe mắt, rút thêm một quân bài bổ trợ từ bộ bài phẳng đặt nhẹ nhàng cạnh bên...*\n\n${systemNotificationText}\n\nHãy chờ miêu miêu liên kết lá bài bổ trợ mới này vào câu chuyện và giải thích tường tận cho quý nhân nhé! ✨`
       };
 
-      setChatHistory((prev) => [...prev, systemVisualMsg]);
+      const updatedHistory = [...chatHistory, systemVisualMsg];
+      setChatHistory(updatedHistory);
 
       // Call Gemini for interactive updates
-      const aiQuery = `Hệ thống cập nhật: Tôi vừa rút thêm lá bài bổ trợ ${cardType.nameVi} (${drawn.isReversed ? 'Ngược' : 'Xuôi'}) làm vai trò ${roleText} cho lá ${selectedParentSlug || 'gốc'}. Hãy giải thích cặn kẽ mối liên hệ và ý nghĩa chữa lành của lá bổ trợ này trong câu chuyện Tarot đối thoại của tôi nhé!`;
+      const aiQuery = `Hệ thống cập nhật: Tôi vừa rút thêm lá bài bổ trợ ${cardType.nameVi} (${drawn.isReversed ? 'Ngược' : 'Xuôi'}) làm vai trò ${roleText} cho lá "${parentCard?.card.nameVi || 'gốc'}". Mèo Vàng hãy chia sẻ ấn tượng nhanh về lá bổ trợ này, giải thích ngắn gọn (tối đa 150 từ) về mối liên kết chữa lành của nó với lá bài gốc, rồi hỏi tôi 1-2 câu hỏi tiếp theo để chúng ta tiếp tục cuộc trò chuyện nhé!`;
       
-      const response = await continueTarotChat(apiKey, chatHistory, aiQuery, undefined, updatedDrawn);
+      const response = await continueTarotChat(apiKey, updatedHistory, aiQuery, undefined, updatedDrawn);
       animateTypewriter(response.reply);
 
     } catch (err: any) {
@@ -415,7 +434,7 @@ export default function InteractiveReadingPage() {
 
   return (
     <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-6 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
-      <div className="w-full max-w-6xl flex flex-col gap-6 items-stretch">
+      <div className="w-full max-w-[98vw] lg:max-w-[96vw] xl:max-w-[1800px] 2xl:max-w-[96vw] flex flex-col gap-6 items-stretch">
         
         {/* Page Title */}
         <div className="text-center border-b border-gold-primary/10 pb-4 flex flex-col items-center gap-1.5">
@@ -574,18 +593,31 @@ export default function InteractiveReadingPage() {
 
           {/* STEP 4: MAIN INTERACTIVE DIALOGUE SCREEN */}
           {(step === 'CHAT_ACTIVE' || step === 'CHAT_SHUFFLING' || step === 'CHAT_PICKING') && drawnCards.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch animate-[fadeIn_0.3s_ease-out] w-full max-w-6xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch animate-[fadeIn_0.3s_ease-out] w-full max-w-full">
               
-              {/* LEFT: Dynamic Tarot Board Canvas (7/12 cols) */}
-              <div className="lg:col-span-7 flex flex-col gap-3 min-h-[500px]">
+              {/* LEFT: Dynamic Tarot Board Canvas (7/12 cols, 8/12 on xl screens) */}
+              <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-3 min-h-[500px]">
                 <h3 className="font-cinzel text-xs font-bold text-gold-light uppercase tracking-wider pl-1.5 flex items-center gap-1.5">
                   🔮 Bàn Bài Đối Thoại Động ({drawnCards.length}/20 lá)
                 </h3>
-                <InteractiveTarotBoard cards={drawnCards} />
+                <InteractiveTarotBoard 
+                  cards={drawnCards} 
+                  selectedParentSlug={selectedParentSlug}
+                  onSelectParent={(slug) => setSelectedParentSlug(slug)}
+                  onUpdateCard={(cardId, updates) => {
+                    setDrawnCards((prev) =>
+                      prev.map((c) => (c.id === cardId ? { ...c, ...updates } : c))
+                    );
+                  }}
+                  onInspectCard={(card) => {
+                    setInspectorCard(card);
+                    setIsInspectorOpen(true);
+                  }}
+                />
               </div>
 
-              {/* RIGHT: Converse Chat Frame (5/12 cols) */}
-              <div className="lg:col-span-5 flex flex-col bg-bg-surface/30 border border-gold-primary/15 rounded-3xl p-4 md:p-5 shadow-2xl h-[650px] overflow-hidden relative backdrop-blur-xl">
+              {/* RIGHT: Converse Chat Frame (5/12 cols, 4/12 on xl screens) */}
+              <div className="lg:col-span-5 xl:col-span-4 flex flex-col bg-bg-surface/30 border border-gold-primary/15 rounded-3xl p-4 md:p-5 shadow-2xl h-[75vh] md:h-[82vh] overflow-hidden relative backdrop-blur-xl">
                 
                 {/* Chat Header */}
                 <div className="flex items-center justify-between border-b border-gold-primary/10 pb-3 flex-shrink-0">
@@ -626,10 +658,11 @@ export default function InteractiveReadingPage() {
                             : 'bg-white/[0.02] border-white/[0.04] text-text-primary rounded-tl-none'
                         }`}
                       >
-                        {/* Markdown styling helper */}
-                        <div className="whitespace-pre-line font-lora">
-                          {msg.content}
-                        </div>
+                        {msg.role === 'user' ? (
+                          <div className="whitespace-pre-line font-lora">{msg.content}</div>
+                        ) : (
+                          <Markdown content={msg.content} className="font-lora" />
+                        )}
                       </div>
 
                       {/* Msg footer timestamp */}
@@ -643,9 +676,9 @@ export default function InteractiveReadingPage() {
                   {isTyping && typedReply && (
                     <div className="flex flex-col max-w-[85%] self-start items-start">
                       <div className="rounded-2xl px-4 py-3 text-xs md:text-sm leading-relaxed font-lora border bg-white/[0.02] border-white/[0.04] text-text-primary rounded-tl-none">
-                        <div className="whitespace-pre-line">
-                          {typedReply}
-                          <span className="inline-block w-1.5 h-3.5 ml-1 bg-gold-primary animate-pulse" />
+                        <div>
+                          <Markdown content={typedReply} className="inline-block" />
+                          <span className="inline-block w-1.5 h-3.5 ml-1 bg-gold-primary animate-pulse align-middle" />
                         </div>
                       </div>
                       <span className="text-[9px] text-text-secondary/40 font-sans mt-1 px-1">
@@ -674,6 +707,34 @@ export default function InteractiveReadingPage() {
 
                   <div ref={chatEndRef} />
                 </div>
+
+                {/* Selected Parent Card Info Bar */}
+                {drawnCards.length < 20 && !aiLoading && !isTyping && (
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 px-3 py-1.5 bg-white/[0.02] border border-gold-primary/10 rounded-xl mb-1 text-[10px] text-text-secondary/70">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gold-light">📍 Lá bài gốc được chọn:</span>
+                      {(() => {
+                        const parentCard = drawnCards.find((c) => c.card.slug === selectedParentSlug);
+                        if (!parentCard) return <span className="italic text-text-secondary/40">Chưa chọn</span>;
+                        const roleLabel = parentCard.customPositionName || (
+                          parentCard.role === 'core' ? 'Cốt Lõi' : 
+                          parentCard.role === 'clarifier' ? 'Làm Rõ' : 
+                          parentCard.role === 'branch-a' ? 'Lựa Chọn A' : 
+                          parentCard.role === 'branch-b' ? 'Lựa Chọn B' : 
+                          parentCard.role === 'directional' ? 'Hướng Nhìn' : 'Lời Khuyên'
+                        );
+                        return (
+                          <strong className="text-gold-light font-bold">
+                            [{roleLabel}] {parentCard.card.nameVi}
+                          </strong>
+                        );
+                      })()}
+                    </div>
+                    <span className="text-[8px] italic text-text-secondary/40 font-lora">
+                      💡 Click lá bài trên bàn để đổi lá gốc cần bổ trợ
+                    </span>
+                  </div>
+                )}
 
                 {/* Interactive Supporting Card Drawing Drawer (Dynamic Chips) */}
                 {drawnCards.length < 20 && !aiLoading && !isTyping && (
@@ -750,6 +811,15 @@ export default function InteractiveReadingPage() {
         </div>
 
       </div>
+
+      {/* Detailed Card Inspector */}
+      {inspectorCard && (
+        <CardInspector
+          card={inspectorCard}
+          isOpen={isInspectorOpen}
+          onClose={() => setIsInspectorOpen(false)}
+        />
+      )}
     </div>
   );
 }

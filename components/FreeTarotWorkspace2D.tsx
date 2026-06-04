@@ -785,16 +785,13 @@ export default function FreeTarotWorkspace2D({
                           isActive ? 'scale-[1.04]' : ''
                         }`}
                       >
-                        <div className={`rounded-lg ${isActive ? style.glow : ''}`}>
+                        <div>
                           <TarotCard
                             card={workspaceCard.card}
                             isFlipped={true}
                             isReversed={workspaceCard.isReversed}
                             size="sm"
                             interactive={false}
-                            className={`rounded-lg overflow-hidden border ${
-                              isActive ? 'border-gold-light' : 'border-white/10'
-                            }`}
                           />
                         </div>
 

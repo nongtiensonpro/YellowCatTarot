@@ -35,6 +35,18 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
     }
   }, [isOpen]);
 
+  // Toggle body overflow & styling when inspector is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('inspector-open');
+    } else {
+      document.body.classList.remove('inspector-open');
+    }
+    return () => {
+      document.body.classList.remove('inspector-open');
+    };
+  }, [isOpen]);
+
   // Reset state when card changes
   useEffect(() => {
     setCurrentCard(card);
@@ -211,7 +223,7 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black/95 backdrop-blur-md select-none font-sans overflow-hidden"
+          className="fixed inset-0 z-[99] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md select-none font-sans overflow-hidden"
           onWheel={handleWheel}
         >
           {/* Subtle Ghibli-themed background particles */}
@@ -230,7 +242,7 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
           </div>
 
           {/* TOP CONTROLS BAR */}
-          <div className="w-full h-16 px-4 md:px-6 flex items-center justify-between bg-gradient-to-b from-black/90 to-transparent z-30">
+          <div className="fixed top-0 left-0 w-full h-16 px-4 md:px-6 flex items-center justify-between bg-gradient-to-b from-black/95 via-black/85 to-transparent z-40">
             {/* Title / Info */}
             <div className="text-white flex-1 min-w-0 pr-4">
               <h3 className="font-cinzel text-sm md:text-lg font-bold text-gold-light truncate tracking-wide leading-tight">
@@ -313,7 +325,7 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
           </div>
 
           {/* MAIN CONTAINER */}
-          <div className="flex-1 w-full flex flex-col md:flex-row items-center justify-center p-4 md:p-6 overflow-hidden relative">
+          <div className="flex-1 w-full pt-16 flex flex-col md:flex-row items-center justify-center p-4 md:p-6 overflow-hidden relative">
             
             {!singleCardOnly && (
               <button
@@ -343,15 +355,15 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
                 animate={{ scale: zoomScale, x: panOffset.x, y: panOffset.y }}
                 transition={isDragging ? { type: 'tween', duration: 0 } : { type: 'spring', damping: 25, stiffness: 150 }}
                 onDoubleClick={handleDoubleClick}
-                className="relative max-h-[70vh] md:max-h-[82vh] aspect-[1501/2553] h-[65vh] md:h-[80vh] rounded-2xl md:rounded-3xl overflow-hidden border-2 border-gold-primary/30 shadow-[0_0_40px_rgba(0,0,0,0.85)] select-none"
+                className="relative max-h-[70vh] md:max-h-[82vh] aspect-[1501/2553] h-[65vh] md:h-[80vh] rounded-2xl md:rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.85)] select-none"
               >
-                <div className="absolute inset-1.5 border border-white/10 rounded-[inherit] z-10 pointer-events-none" />
                 <Image
                   src={currentCard.imagePath}
                   alt={currentCard.nameVi}
                   fill
-                  sizes="(max-width: 768px) 90vw, 50vw"
-                  className="object-cover pointer-events-none"
+                  unoptimized
+                  sizes="100vw"
+                  className="object-contain pointer-events-none"
                   priority
                 />
               </motion.div>
