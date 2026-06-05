@@ -14,6 +14,7 @@ interface ReadingBoardProps {
   spreadType: SpreadType;
   onCardClick?: (index: number) => void;
   onInspectCard?: (card: TarotCardType) => void;
+  onCardHover?: (index: number | null) => void;
   interactive?: boolean;
 }
 
@@ -22,6 +23,7 @@ export default function ReadingBoard({
   spreadType,
   onCardClick,
   onInspectCard,
+  onCardHover,
   interactive = true,
 }: ReadingBoardProps) {
   return (
@@ -47,7 +49,11 @@ export default function ReadingBoard({
             </div>
 
             {/* Card Slot */}
-            <div className="relative transform transition-all duration-300 hover:drop-shadow-[0_0_12px_var(--color-gold-glow)]">
+            <div
+              onMouseEnter={() => onCardHover && onCardHover(index)}
+              onMouseLeave={() => onCardHover && onCardHover(null)}
+              className="relative transform transition-all duration-300 hover:drop-shadow-[0_0_12px_var(--color-gold-glow)]"
+            >
               {item ? (
                 <TarotCard
                   card={item.card}

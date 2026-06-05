@@ -448,6 +448,13 @@ export default function InteractiveReadingPage() {
             size="lg"
             speechBubble={catProps.speech}
             drawnCardsCount={drawnCards.length}
+            currentCard={drawnCards.length > 0 ? {
+              slug: drawnCards[drawnCards.length - 1].card.slug,
+              arcana: drawnCards[drawnCards.length - 1].card.arcana,
+              suit: drawnCards[drawnCards.length - 1].card.suit,
+              isReversed: drawnCards[drawnCards.length - 1].isReversed,
+            } : undefined}
+            spreadContext="interactive"
           />
         </div>
 

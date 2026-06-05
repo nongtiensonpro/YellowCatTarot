@@ -219,6 +219,13 @@ export default function SingleCardReading() {
               speechBubble={catProps.speech}
               drawnCardsCount={revealedCard ? 1 : 0}
               className="mt-4"
+              currentCard={revealedCard ? {
+                slug: revealedCard.card.slug,
+                arcana: revealedCard.card.arcana,
+                suit: revealedCard.card.suit,
+                isReversed: revealedCard.isReversed,
+              } : undefined}
+              spreadContext="single"
             />
           </div>
 

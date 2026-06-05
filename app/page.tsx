@@ -6,11 +6,39 @@ import { getDailyCard, TarotCard as TarotCardType } from '@/lib/cards-data';
 import TarotCard from '@/components/TarotCard';
 import YellowCat from '@/components/YellowCat';
 
+const catDialogues = [
+  "Chào mừng quý nhân đến với căn nhà gỗ phép thuật của Mèo Vàng! Hôm nay quý nhân muốn tìm câu trả lời từ các quân bài chứ? 🐱✨",
+  
+  // Gợi ý trải bài
+  "Quý nhân ơi, nếu muốn xem nhanh một ngày hôm nay thế nào, hãy thử trải bài Một Lá để em gỡ rối nhanh cho nhé! 🃏✨",
+  "Băn khoăn chuyện cũ hay lo lắng tương lai sao? Trải bài Ba Lá Quá Khứ - Hiện Tại - Tương Lai sinh ra là để dành cho quý nhân đó ạ! ⏱️🔮",
+  "Vấn đề của quý nhân đang cực kỳ rối rắm? Hãy thử trải bài Celtic Cross 10 lá kinh điển, em sẽ bóc tách sâu sắc từng ngóc ngách nha! ⛩️🕯️",
+  "Quý nhân muốn tự tay kéo thả bài và ghi chú chiêm nghiệm riêng? Trải bài Tự Do luôn sẵn sàng chờ đón đôi tay ngọc ngà của bạn! 🎨✍️",
+  "Chế độ đỉnh cao nhất của em là Đối Thoại Động & Nhặt Bài Rẽ Nhánh đó ạ! Quý nhân vừa trò chuyện vừa lật bài mở rộng nhé, em thích nhất trò này luôn! 💬🌿",
+  
+  // Đùa vui phong cách Mèo Vàng
+  "Quý nhân của lòng em hôm nay trông rạng ngời ghê nha! Rút một lá bài xem hôm nay vũ trụ ưu ái quý nhân thế nào đi nào! 🥰🐟",
+  "Miêu miêu nhỏ bé này đã chuẩn bị tách trà hoa cúc ngọt ngào cùng bộ bài xào lách cách rồi... Quý nhân đừng ngó lơ em nha, tội nghiệp em lắm... 🥺🍵",
+  "Đừng tự hoại hay chìm đắm trong sầu muộn nữa nha quý nhân! Để em kích hoạt chế độ châm biếm bọc đường xoa dịu tâm hồn quý nhân nha! 🥊🌸",
+  "Điểm thân thiết của quý nhân với em đã lưu LocalStorage rồi đó! Vuốt ve em và ghé thăm Hồ Sơ Mèo Vàng để trang bị Nơ đỏ hay Kính học giả cho em nhé! 👓🎀",
+  "Ngoàm ngoàm... em ngửi thấy mùi cá nướng thơm phức đâu đây! Quý nhân ghé Hồ Sơ em cho em ăn một con cá nướng đi mà, em đói xỉu mất thôi... 🐟😻",
+  "Vũ trụ đang gửi tín hiệu tích cực cực mạnh đến quý nhân... mà em nghĩ tín hiệu đó chính là nụ cười đáng yêu của quý nhân đấy ạ! Hì hì 🌟✨"
+];
+
 export default function Home() {
   const [dailyData, setDailyData] = useState<{ card: TarotCardType; isReversed: boolean } | null>(null);
   const [isDailyFlipped, setIsDailyFlipped] = useState(false);
   const [particles, setParticles] = useState<{ id: number; left: string; delay: string; duration: string; size: string }[]>([]);
   const [stars, setStars] = useState<{ id: number; top: string; left: string; delay: string; duration: string; scale: string }[]>([]);
+  const [speechIndex, setSpeechIndex] = useState(0);
+
+  // Thay đổi lời thoại của Mèo Vàng mỗi 10 giây
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSpeechIndex((prevIndex) => (prevIndex + 1) % catDialogues.length);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Generate dynamic particles and stars client-side to avoid hydration mismatches
   useEffect(() => {
@@ -93,7 +121,7 @@ export default function Home() {
           <YellowCat
             state="idle"
             size="hero"
-            speechBubble="Chào mừng bạn đến với căn nhà gỗ phép thuật của Mèo Vàng! Hôm nay bạn muốn tìm câu trả lời từ các quân bài chứ? 🐱✨"
+            speechBubble={catDialogues[speechIndex]}
           />
         </div>
 

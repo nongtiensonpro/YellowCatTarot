@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import YellowCat from '@/components/YellowCat';
 
 export default function MeoVangIntroPage() {
   const [activeTab, setActiveTab] = useState<'personality' | 'healing' | 'guide' | 'attic'>('personality');
@@ -30,12 +31,13 @@ export default function MeoVangIntroPage() {
           <div className="absolute w-[200px] h-[200px] rounded-full bg-gold-primary/5 blur-3xl -top-10 -left-10 pointer-events-none" />
           <div className="absolute w-[300px] h-[300px] rounded-full bg-mystic-purple/5 blur-3xl -bottom-20 -right-20 pointer-events-none" />
           
-          {/* Logo container */}
-          <div className="relative w-36 h-36 md:w-44 md:h-44 rounded-full border-2 border-gold-light/40 overflow-hidden flex-shrink-0 shadow-[0_0_20px_rgba(244,162,97,0.2)] animate-crystal">
-            <img 
-              src="/meo-vang-logo.png" 
-              alt="Mèo Vàng Chân Dung" 
-              className="w-full h-full object-cover"
+          {/* Interactive Mascot with controls */}
+          <div className="flex-shrink-0">
+            <YellowCat
+              state="idle"
+              size="lg"
+              showControls={true}
+              speechBubble="Em chào quý nhân! Quý nhân ghé thăm hồ sơ của em để xem các chỉ số và trang bị phụ kiện đúng không ạ? 🐱💖"
             />
           </div>
 

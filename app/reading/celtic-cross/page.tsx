@@ -116,6 +116,19 @@ export default function CelticCrossReading() {
     }
   };
 
+  const latestFlippedCard = useMemo(() => {
+    const flipped = drawnCards.filter((c) => c.isFlipped);
+    if (flipped.length === 0) return undefined;
+    const latest = flipped[flipped.length - 1];
+    return {
+      slug: latest.card.slug,
+      arcana: latest.card.arcana,
+      suit: latest.card.suit,
+      isReversed: latest.isReversed,
+      positionIndex: drawnCards.indexOf(latest),
+    };
+  }, [drawnCards]);
+
   const catProps = getCatProps();
 
   // Trigger high-entropy shuffle animation and algorithms
@@ -382,6 +395,8 @@ export default function CelticCrossReading() {
               speechBubble={catProps.speech}
               drawnCardsCount={drawnCards.filter((c) => c.isFlipped).length}
               className={step === 'PICKING' ? "mt-2" : "mt-4"}
+              currentCard={latestFlippedCard}
+              spreadContext="celtic-cross"
             />
 
             {/* Nút rút nhanh đưa về gần gũi bên Mèo Vàng */}

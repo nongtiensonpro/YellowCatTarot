@@ -43,6 +43,35 @@ export default function ThreeCardReading() {
   const [aiError, setAiError] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
 
+  // ── HOÀNG KIM: Theo dõi vị trí hover và lá bài hiện tại ──
+  const [hoveredCardIdx, setHoveredCardIdx] = useState<number | null>(null);
+
+  const latestFlippedCard = React.useMemo(() => {
+    const flipped = drawnCards.filter((c) => c.isFlipped);
+    
+    // Nếu đang hover vào một vị trí bài
+    if (hoveredCardIdx !== null) {
+      const cardAtHover = drawnCards[hoveredCardIdx];
+      return {
+        slug: cardAtHover?.card.slug || '',
+        arcana: cardAtHover?.card.arcana || 'major',
+        suit: cardAtHover?.card.suit,
+        isReversed: cardAtHover?.isReversed,
+        positionIndex: hoveredCardIdx,
+      };
+    }
+    
+    if (flipped.length === 0) return undefined;
+    const latest = flipped[flipped.length - 1];
+    return {
+      slug: latest.card.slug,
+      arcana: latest.card.arcana,
+      suit: latest.card.suit,
+      isReversed: latest.isReversed,
+      positionIndex: drawnCards.indexOf(latest),
+    };
+  }, [drawnCards, hoveredCardIdx]);
+
   // Đồng bộ Mèo Vàng theo bước hiện tại
   const getCatProps = (): { state: YellowCatState; speech: string } => {
     switch (step) {
@@ -285,6 +314,8 @@ export default function ThreeCardReading() {
               speechBubble={catProps.speech}
               drawnCardsCount={drawnCards.filter((c) => c.isFlipped).length}
               className={step === 'PICKING' ? "mt-2" : "mt-4"}
+              currentCard={latestFlippedCard}
+              spreadContext="three-card"
             />
 
             {/* Nút rút bài nhanh gần gũi với Mèo Vàng */}
@@ -370,6 +401,7 @@ export default function ThreeCardReading() {
                     spreadType={spreadType}
                     interactive={false}
                     onInspectCard={(card) => setSelectedInspectCard(card)}
+                    onCardHover={setHoveredCardIdx}
                   />
 
                   {step === 'RESULT' && (
