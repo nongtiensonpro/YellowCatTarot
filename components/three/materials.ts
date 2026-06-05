@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // Tạo texture gradient cho MeshToonMaterial để có hiệu ứng Cel-shading hoạt hình
-export function createToonGradientTexture(steps: number = 3) {
+export function createToonGradientTexture(steps: number = 5) {
   if (typeof window === 'undefined') return null;
 
   const canvas = document.createElement('canvas');
@@ -37,4 +37,9 @@ export const CAT_COLORS = {
   bell: '#ffd166',      // Chuông vàng sáng
   mysticPurple: '#9b5de5', // Màu tím huyền thuật
   mysticGold: '#f7c59f', // Màu hào quang lấp lánh
+  stripe: '#c47832',     // Sọc vằn cam đậm
+  pawPad: '#e8a4a4',     // Đệm chân hồng nhạt
+  mouthInner: '#c44040', // Miệng bên trong đỏ sẫm
+  eyebrow: '#8a5a2e',    // Lông mày nâu nhạt
+  chestFluff: '#ffe0a0', // Lông ngực kem sáng
 };

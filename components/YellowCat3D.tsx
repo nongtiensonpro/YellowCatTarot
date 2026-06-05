@@ -6,6 +6,8 @@ import { useWebGLSupport } from '../lib/useWebGLSupport';
 import YellowCatSVG from './YellowCat';
 import { CatModel } from './three/CatModel';
 import { MagicParticles } from './three/MagicParticles';
+import { PostProcessing } from './three/PostProcessing';
+import { ShockwaveRing } from './three/effects/ShockwaveRing';
 
 export type YellowCatState = 'idle' | 'reading' | 'sleeping' | 'surprised' | 'happy' | 'shuffle';
 
@@ -40,11 +42,18 @@ export default function YellowCat3D({
   drawnCardsCount = 0,
 }: YellowCat3DProps) {
   const [mounted, setMounted] = useState(false);
+  const [isLowEnd, setIsLowEnd] = useState(false);
   const isWebGLSupported = useWebGLSupport();
 
   // Đảm bảo mount phía client để tránh hydration mismatch (lỗi SSR)
   useEffect(() => {
     setMounted(true);
+    
+    if (typeof window !== 'undefined') {
+      const lowCpu = navigator.hardwareConcurrency !== undefined && navigator.hardwareConcurrency <= 4;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsLowEnd(lowCpu || isMobile);
+    }
   }, []);
 
   // 1. Nếu chưa mount (phía server) hoặc trình duyệt không hỗ trợ WebGL -> FALLBACK sang SVG cũ
@@ -105,9 +114,13 @@ export default function YellowCat3D({
           {/* Render Mô hình Mèo 3D & Hạt bụi ma thuật */}
           <Suspense fallback={null}>
             <group position={[0, -0.2, 0]}>
-              <CatModel state={state} drawnCardsCount={drawnCardsCount} />
+              <CatModel state={state} size={size} drawnCardsCount={drawnCardsCount} />
               <MagicParticles state={state} />
+              <ShockwaveRing drawnCardsCount={drawnCardsCount} />
             </group>
+            
+            {/* Hiệu ứng hậu kỳ cao cấp (chỉ tải ở thiết bị cấu hình cao) */}
+            {!isLowEnd && <PostProcessing state={state} />}
           </Suspense>
         </Canvas>
       </div>
