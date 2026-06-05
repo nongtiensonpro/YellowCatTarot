@@ -8,20 +8,9 @@ import { interpretCards, CardReading, createUserPrompt } from '@/lib/gemini';
 import { useApiKey } from '@/components/ApiKeyProvider';
 import ReadingBoard from '@/components/ReadingBoard';
 import CardDeck from '@/components/CardDeck';
-import dynamic from 'next/dynamic';
-import { YellowCatState } from '@/components/YellowCat';
+import YellowCat, { YellowCatState } from '@/components/YellowCat';
 import AIInterpretation from '@/components/AIInterpretation';
-
 import CardInspector from '@/components/CardInspector';
-
-const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-[180px] h-[180px] flex items-center justify-center">
-      <div className="animate-pulse text-gold-light/60 font-cinzel text-xs">Đang đánh thức Mèo Vàng...</div>
-    </div>
-  ),
-});
 
 type FlowStep = 'INPUT' | 'SHUFFLING' | 'PICKING' | 'RESULT' | 'INTERPRETING' | 'COMPLETE';
 
@@ -290,7 +279,7 @@ export default function ThreeCardReading() {
               </div>
             )}
 
-            <YellowCat3D
+            <YellowCat
               state={catProps.state}
               size="lg"
               speechBubble={catProps.speech}

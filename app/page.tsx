@@ -3,17 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getDailyCard, TarotCard as TarotCardType } from '@/lib/cards-data';
-import dynamic from 'next/dynamic';
 import TarotCard from '@/components/TarotCard';
-
-const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-[260px] h-[260px] md:w-[320px] md:h-[320px] flex items-center justify-center">
-      <div className="animate-pulse text-gold-light/60 font-cinzel text-xs">Đang triệu hồi Mèo Vàng 3D...</div>
-    </div>
-  ),
-});
+import YellowCat from '@/components/YellowCat';
 
 export default function Home() {
   const [dailyData, setDailyData] = useState<{ card: TarotCardType; isReversed: boolean } | null>(null);
@@ -99,7 +90,7 @@ export default function Home() {
           {/* Wooden table outline below the cat */}
           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-48 h-2 bg-gradient-to-r from-amber-900/60 via-amber-800/80 to-amber-900/60 rounded-full border border-gold-primary/25 shadow-lg" />
           
-          <YellowCat3D
+          <YellowCat
             state="idle"
             size="hero"
             speechBubble="Chào mừng bạn đến với căn nhà gỗ phép thuật của Mèo Vàng! Hôm nay bạn muốn tìm câu trả lời từ các quân bài chứ? 🐱✨"

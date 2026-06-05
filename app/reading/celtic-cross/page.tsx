@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
+import YellowCat, { YellowCatState } from '@/components/YellowCat';
 import { useApiKey } from '@/components/ApiKeyProvider';
 import { TarotCard as TarotCardType, tarotCards, getCardById } from '@/lib/cards-data';
 import { spreadTypes } from '@/lib/spreads';
@@ -11,7 +11,6 @@ import CardDeck from '@/components/CardDeck';
 import CelticCrossBoard from '@/components/CelticCrossBoard';
 import AIInterpretation from '@/components/AIInterpretation';
 import CardInspector from '@/components/CardInspector';
-import { YellowCatState } from '@/components/YellowCat';
 import {
   hyperShuffle,
   createNewDeck,
@@ -25,15 +24,6 @@ import {
   clearDeck
 } from '@/lib/tarot-deck';
 import { useEntropyCollector } from '@/hooks/useEntropyCollector';
-
-const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-[180px] h-[180px] flex items-center justify-center">
-      <div className="animate-pulse text-gold-light/60 font-cinzel text-xs">Đang đánh thức Mèo Vàng...</div>
-    </div>
-  ),
-});
 
 type FlowStep = 'INPUT' | 'SHUFFLING' | 'PICKING' | 'RESULT' | 'INTERPRETING' | 'COMPLETE';
 
@@ -386,7 +376,7 @@ export default function CelticCrossReading() {
               </div>
             )}
 
-            <YellowCat3D
+            <YellowCat
               state={catProps.state}
               size="lg"
               speechBubble={catProps.speech}

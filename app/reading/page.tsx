@@ -2,16 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-
-const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-[180px] h-[180px] flex items-center justify-center">
-      <div className="animate-pulse text-gold-light/60 font-cinzel text-xs">Đang đánh thức Mèo Vàng...</div>
-    </div>
-  ),
-});
+import YellowCat from '@/components/YellowCat';
 
 export default function ReadingHub() {
   return (
@@ -33,7 +24,7 @@ export default function ReadingHub() {
           
           {/* Mèo Vàng character (4/12 size) */}
           <div className="lg:col-span-4 flex flex-col items-center justify-center p-4">
-            <YellowCat3D
+            <YellowCat
               state="idle"
               size="lg"
               speechBubble="Bạn muốn cùng Mèo Vàng lắng nghe lời chỉ dẫn nào của vũ trụ hôm nay? Hãy chọn một kiểu trải bài nhé! 🐱✨"

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useApiKey } from '@/components/ApiKeyProvider';
 import { useEntropyCollector } from '@/hooks/useEntropyCollector';
 import { TarotCard as TarotCardType, tarotCards, getCardById } from '@/lib/cards-data';
@@ -17,18 +16,9 @@ import {
 } from '@/lib/tarot-deck';
 import CardDeck from '@/components/CardDeck';
 import InteractiveTarotBoard from '@/components/InteractiveTarotBoard';
-import { YellowCatState } from '@/components/YellowCat';
+import YellowCat, { YellowCatState } from '@/components/YellowCat';
 import CardInspector from '@/components/CardInspector';
 import Markdown from '@/components/Markdown';
-
-const YellowCat3D = dynamic(() => import('@/components/YellowCat3D'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-[180px] h-[180px] flex items-center justify-center">
-      <div className="animate-pulse text-gold-light/60 font-cinzel text-xs">Đang gọi Mèo Vàng...</div>
-    </div>
-  ),
-});
 
 type FlowStep = 'INPUT' | 'INITIAL_SHUFFLE' | 'INITIAL_PICK' | 'CHAT_ACTIVE' | 'CHAT_SHUFFLING' | 'CHAT_PICKING';
 
@@ -453,7 +443,7 @@ export default function InteractiveReadingPage() {
 
         {/* TOP: Yellow Cat character box */}
         <div className="w-full max-w-xl mx-auto flex flex-col items-center justify-center p-3 bg-bg-surface/10 border border-gold-primary/5 rounded-2xl z-20">
-          <YellowCat3D
+          <YellowCat
             state={catProps.state}
             size="lg"
             speechBubble={catProps.speech}
