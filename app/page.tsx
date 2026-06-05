@@ -134,41 +134,156 @@ export default function Home() {
 
       </section>
 
-      {/* 🌟 FEATURE TILES SECTION */}
-      <section className="relative z-10 w-full max-w-5xl px-4 py-8 border-t border-gold-primary/10 bg-bg-mid/30 backdrop-blur-md">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-lora">
-          {/* Tile 1 */}
-          <div className="bg-bg-surface/20 border border-gold-primary/10 rounded-2xl p-5 shadow-xl flex flex-col gap-2 items-center text-center">
-            <span className="text-2xl">📚</span>
-            <h3 className="font-cinzel text-sm text-gold-light font-bold uppercase tracking-wider">
-              78 Lá Bài Rider-Waite-Smith
-            </h3>
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Tra cứu đầy đủ hình ảnh thực tế chất lượng cao, các từ khóa cốt lõi và bài học chi tiết cho cả hai chiều xuôi - ngược của 78 quân bài.
-            </p>
+      {/* 🌟 FEATURE SHOWCASE SECTION */}
+      <section className="relative z-10 w-full max-w-5xl px-4 py-10 border-t border-gold-primary/10">
+        
+        {/* Section Header */}
+        <div className="text-center mb-8">
+          <h2 className="font-cinzel text-xl md:text-2xl font-bold text-gold-primary tracking-wide">
+            ✦ Khám Phá Tính Năng ✦
+          </h2>
+          <p className="font-lora text-xs text-text-secondary italic mt-1.5">
+            Hệ sinh thái Tarot toàn diện với trí tuệ nhân tạo và trải nghiệm tương tác sống động
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-lora">
+          
+          {/* ★ Feature 1: Interactive Dialog Mode — HIGHLIGHTED */}
+          <Link
+            href="/reading/interactive"
+            className="group md:col-span-2 relative overflow-hidden bg-gradient-to-br from-[#1c1a38]/60 via-bg-surface/30 to-[#1c1a38]/60 border border-gold-primary/30 hover:border-gold-light/70 rounded-2xl p-6 shadow-2xl flex flex-col sm:flex-row gap-5 items-center transition-all duration-400 hover:shadow-[0_0_30px_rgba(244,162,97,0.2)] hover:-translate-y-0.5 cursor-pointer"
+          >
+            {/* Animated shimmer overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-gold-primary/0 via-gold-primary/5 to-gold-primary/0 -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-gold-primary/5 blur-3xl pointer-events-none" />
+            
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold-primary/20 to-gold-primary/5 border-2 border-gold-primary/40 flex items-center justify-center text-3xl shadow-[0_0_12px_rgba(244,162,97,0.2)] group-hover:scale-110 transition-transform flex-shrink-0 relative">
+              💬
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold-light opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-gold-primary"></span>
+              </span>
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5 text-center sm:text-left">
+              <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
+                <h3 className="font-cinzel text-base md:text-lg font-bold text-gold-light group-hover:text-white transition-colors">
+                  Đối Thoại Cùng Mèo Vàng
+                </h3>
+                <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-gold-primary/15 border border-gold-primary/35 text-gold-light uppercase animate-[pulse_3s_infinite]">
+                  MỚI ✨
+                </span>
+              </div>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                Cuộc hội thoại chiều sâu với AI. Vừa trò chuyện, vừa nhặt bài làm rõ — rẽ nhánh cây động lên tới 20 lá để tháo gỡ mọi nút thắt. Mèo Vàng sẽ chủ động gợi ý rút thêm bài khi cần hướng bạn đến lối đi tốt đẹp hơn.
+              </p>
+            </div>
+            <div className="text-gold-light group-hover:translate-x-1.5 transition-transform duration-200 text-lg hidden sm:block">
+              ➔
+            </div>
+          </Link>
+
+          {/* Feature 2: Card Library */}
+          <Link
+            href="/cards"
+            className="group bg-bg-surface/20 border border-gold-primary/10 hover:border-gold-light/50 rounded-2xl p-5 shadow-xl flex gap-4 items-center transition-all duration-300 hover:-translate-y-0.5 hover:bg-bg-surface/35 cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gold-primary/10 border border-gold-primary/25 flex items-center justify-center text-2xl group-hover:bg-gold-primary/20 transition-all flex-shrink-0">
+              📚
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="font-cinzel text-sm font-bold text-gold-light group-hover:text-white transition-colors uppercase tracking-wider">
+                Thư Viện 78 Lá Bài
+              </h3>
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Hình ảnh Rider-Waite-Smith chất lượng cao, từ khóa, bài học chi tiết chiều xuôi & ngược. Hỗ trợ ngắm lá bài toàn màn hình.
+              </p>
+            </div>
+          </Link>
+
+          {/* Feature 3: Mèo Vàng Profile */}
+          <Link
+            href="/meo-vang"
+            className="group bg-bg-surface/20 border border-gold-primary/10 hover:border-gold-light/50 rounded-2xl p-5 shadow-xl flex gap-4 items-center transition-all duration-300 hover:-translate-y-0.5 hover:bg-bg-surface/35 cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gold-primary/10 border border-gold-primary/25 flex items-center justify-center text-2xl group-hover:bg-gold-primary/20 transition-all flex-shrink-0">
+              🐱
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="font-cinzel text-sm font-bold text-gold-light group-hover:text-white transition-colors uppercase tracking-wider">
+                Hồ Sơ Mèo Vàng
+              </h3>
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Tính cách, giao thức chữa lành, cẩm nang đối thoại chi tiết và hướng dẫn sử dụng chế độ đặc biệt.
+              </p>
+            </div>
+          </Link>
+
+          {/* Feature 4: Reading Modes — Spreads */}
+          <Link
+            href="/reading"
+            className="group md:col-span-2 bg-bg-surface/20 border border-gold-primary/10 hover:border-gold-light/50 rounded-2xl p-5 shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-bg-surface/35 cursor-pointer"
+          >
+            <div className="flex gap-4 items-center">
+              <div className="w-12 h-12 rounded-xl bg-gold-primary/10 border border-gold-primary/25 flex items-center justify-center text-2xl group-hover:bg-gold-primary/20 transition-all flex-shrink-0">
+                🃏
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <h3 className="font-cinzel text-sm font-bold text-gold-light group-hover:text-white transition-colors uppercase tracking-wider">
+                  5 Kiểu Trải Bài Đa Dạng
+                </h3>
+                <p className="text-[11px] text-text-secondary leading-relaxed">
+                  Từ rút nhanh 1 lá đến Celtic Cross 10 lá kinh điển — mỗi kiểu trải bài đều được Gemini AI luận giải sâu sắc bằng Markdown phong phú.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {[
+                { icon: '1', label: 'Một Lá', desc: 'Thông điệp nhanh' },
+                { icon: '3', label: 'Ba Lá', desc: 'Quá Khứ → Tương Lai' },
+                { icon: '10', label: 'Celtic Cross', desc: 'Phân tích toàn diện' },
+                { icon: '💬', label: 'Đối Thoại', desc: 'Nhặt bài động' },
+                { icon: '🎨', label: 'Tự Do', desc: 'Kéo thả & ghi chú' },
+              ].map((s) => (
+                <div key={s.label} className="bg-bg-mid/40 border border-gold-primary/10 rounded-lg px-3 py-2 text-center group-hover:border-gold-primary/20 transition-colors">
+                  <div className="text-lg font-bold text-gold-primary font-sans">{s.icon}</div>
+                  <div className="text-[10px] font-cinzel font-bold text-text-primary tracking-wider mt-0.5">{s.label}</div>
+                  <div className="text-[9px] text-text-secondary mt-0.5">{s.desc}</div>
+                </div>
+              ))}
+            </div>
+          </Link>
+
+          {/* Feature 5: AI Integration */}
+          <div className="bg-bg-surface/20 border border-gold-primary/10 rounded-2xl p-5 shadow-xl flex gap-4 items-start">
+            <div className="w-12 h-12 rounded-xl bg-gold-primary/10 border border-gold-primary/25 flex items-center justify-center text-2xl flex-shrink-0">
+              🤖
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="font-cinzel text-sm text-gold-light font-bold uppercase tracking-wider">
+                AI Gemini Luận Giải
+              </h3>
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Kết nối Google Gemini Studio bằng API Key cá nhân. Phản hồi Markdown phong phú với bảng, danh sách, in đậm & emoji.
+              </p>
+            </div>
           </div>
 
-          {/* Tile 2 */}
-          <div className="bg-bg-surface/20 border border-gold-primary/10 rounded-2xl p-5 shadow-xl flex flex-col gap-2 items-center text-center">
-            <span className="text-2xl">🃏</span>
-            <h3 className="font-cinzel text-sm text-gold-light font-bold uppercase tracking-wider">
-              Không Gian Trải Bài Đa Dạng
-            </h3>
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Rút bài một lá nhận thông điệp nhanh hàng ngày, hoặc trải bài ba lá phân tích sâu sắc Quá Khứ - Hiện Tại - Tương Lai của mọi sự kiện.
-            </p>
+          {/* Feature 6: Card Inspector */}
+          <div className="bg-bg-surface/20 border border-gold-primary/10 rounded-2xl p-5 shadow-xl flex gap-4 items-start">
+            <div className="w-12 h-12 rounded-xl bg-gold-primary/10 border border-gold-primary/25 flex items-center justify-center text-2xl flex-shrink-0">
+              🔍
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <h3 className="font-cinzel text-sm text-gold-light font-bold uppercase tracking-wider">
+                Ngắm Bài Toàn Màn Hình
+              </h3>
+              <p className="text-[11px] text-text-secondary leading-relaxed">
+                Phóng to từng lá bài ra toàn bộ màn hình để chiêm nghiệm chi tiết nghệ thuật và biểu tượng ẩn dấu bên trong.
+              </p>
+            </div>
           </div>
 
-          {/* Tile 3 */}
-          <div className="bg-bg-surface/20 border border-gold-primary/10 rounded-2xl p-5 shadow-xl flex flex-col gap-2 items-center text-center">
-            <span className="text-2xl">✨</span>
-            <h3 className="font-cinzel text-sm text-gold-light font-bold uppercase tracking-wider">
-              Luận Giải Trực Tiếp Bằng AI
-            </h3>
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Gọi trực tiếp trí tuệ nhân tạo Google Gemini Studio bằng API Key cá nhân để nhận luận giải tâm tình đầy thông thái từ Mèo Vàng.
-            </p>
-          </div>
         </div>
       </section>
 
