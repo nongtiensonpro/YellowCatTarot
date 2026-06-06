@@ -23,7 +23,12 @@ import Markdown from '@/components/Markdown';
 type FlowStep = 'INPUT' | 'INITIAL_SHUFFLE' | 'INITIAL_PICK' | 'CHAT_ACTIVE' | 'CHAT_SHUFFLING' | 'CHAT_PICKING';
 
 export default function InteractiveReadingPage() {
-  const { apiKey, shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
+  const { apiKey, shuffleTheme, pickingTheme, reduceMotion, setBackgroundTheme } = useApiKey();
+
+  useEffect(() => {
+    setBackgroundTheme('enchanted-forest');
+  }, [setBackgroundTheme]);
+
   const { startCollecting, stopCollecting, onMouseMove, onTouchMove } = useEntropyCollector();
   const [weatherEffect, setWeatherEffect] = useState<'wind' | 'sun' | 'fog' | null>(null);
 
@@ -423,7 +428,7 @@ export default function InteractiveReadingPage() {
   };
 
   return (
-    <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-6 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
+    <div className="flex-1 w-full bg-transparent py-6 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
       <div className="w-full max-w-[98vw] lg:max-w-[96vw] xl:max-w-[1800px] 2xl:max-w-[96vw] flex flex-col gap-6 items-stretch">
         
         {/* Page Title */}

@@ -3,7 +3,7 @@ import { Cinzel, Cinzel_Decorative, Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import { ApiKeyProvider } from "@/components/ApiKeyProvider";
 import Navigation from "@/components/Navigation";
-import GhibliBackground from "@/components/GhibliBackground";
+import GhibliAnimatedBackground from "@/components/GhibliAnimatedBackground";
 
 const cinzel = Cinzel({
   subsets: ["latin"],
@@ -72,7 +72,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[#0d0d1a] text-[#f8f4e3] font-lora selection:bg-[#ffd166]/30 selection:text-[#ffd166]">
         <ApiKeyProvider>
-          <GhibliBackground />
+          <GhibliAnimatedBackground />
           <Navigation />
           <main className="flex-1 flex flex-col">
             {children}

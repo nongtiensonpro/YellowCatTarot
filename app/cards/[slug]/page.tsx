@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useState, useMemo } from 'react';
+import React, { use, useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getCardBySlug, tarotCards, TarotCard as TarotCardType } from '@/lib/cards-data';
@@ -20,7 +20,11 @@ export default function CardDetailPage({ params }: PageProps) {
   const { slug } = use(params);
   const card = useMemo(() => getCardBySlug(slug), [slug]);
   const deepDetail = useMemo(() => getCardDetailBySlug(slug), [slug]);
-  const { apiKey } = useApiKey();
+  const { apiKey, setBackgroundTheme } = useApiKey();
+
+  useEffect(() => {
+    setBackgroundTheme('mystic-night');
+  }, [setBackgroundTheme]);
 
   // State for interactive features
   const [isReversed, setIsReversed] = useState(false);
@@ -112,7 +116,7 @@ export default function CardDetailPage({ params }: PageProps) {
   };
 
   return (
-    <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-8 px-4 sm:px-6 lg:px-8 select-none">
+    <div className="flex-1 w-full bg-transparent py-8 px-4 sm:px-6 lg:px-8 select-none">
       <div className="max-w-5xl mx-auto flex flex-col gap-6">
         
         {/* Breadcrumb & Navigation */}

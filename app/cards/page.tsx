@@ -1,14 +1,20 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { tarotCards } from '@/lib/cards-data';
 import FilterBar from '@/components/FilterBar';
 import CardGrid from '@/components/CardGrid';
+import { useApiKey } from '@/components/ApiKeyProvider';
 
 export default function CardsGallery() {
+  const { setBackgroundTheme } = useApiKey();
   const [activeArcana, setActiveArcana] = useState<'all' | 'major' | 'minor'>('all');
   const [activeSuit, setActiveSuit] = useState<'all' | 'wands' | 'cups' | 'swords' | 'pentacles'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    setBackgroundTheme('mystic-night');
+  }, [setBackgroundTheme]);
 
   // Handle Arcana change and reset suit if necessary
   const handleArcanaChange = (arcana: 'all' | 'major' | 'minor') => {
@@ -47,7 +53,7 @@ export default function CardsGallery() {
   }, [activeArcana, activeSuit, searchQuery]);
 
   return (
-    <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-8 px-4 sm:px-6 lg:px-8 select-none">
+    <div className="flex-1 w-full bg-transparent py-8 px-4 sm:px-6 lg:px-8 select-none">
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
         
         {/* Gallery Title & Header */}

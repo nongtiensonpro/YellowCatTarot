@@ -106,7 +106,11 @@ function findNonOverlappingPlacement(
 
 export default function FreeReadingPage() {
   const { startCollecting, stopCollecting } = useEntropyCollector();
-  const { shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
+  const { shuffleTheme, pickingTheme, reduceMotion, setBackgroundTheme } = useApiKey();
+
+  useEffect(() => {
+    setBackgroundTheme('enchanted-forest');
+  }, [setBackgroundTheme]);
   const hasLoadedSession = useRef(false);
   const idCounterRef = useRef(0);
 
@@ -541,7 +545,7 @@ export default function FreeReadingPage() {
   const activeWorkspaceCard = allDrawnCards.find((card) => card.id === activeCardId) || null;
 
   return (
-    <div className="h-screen w-screen bg-[#070711] select-none flex flex-row overflow-hidden relative">
+    <div className="h-screen w-screen bg-transparent select-none flex flex-row overflow-hidden relative">
       <style>{`
         nav {
           display: none !important;

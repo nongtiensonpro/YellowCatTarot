@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { getDailyCard, TarotCard as TarotCardType } from '@/lib/cards-data';
 import TarotCard from '@/components/TarotCard';
 import YellowCat from '@/components/YellowCat';
+import { useApiKey } from '@/components/ApiKeyProvider';
 
 const catDialogues = [
   "Chào mừng quý nhân đến với căn nhà gỗ phép thuật của Mèo Vàng! Hôm nay quý nhân muốn tìm câu trả lời từ các quân bài chứ? 🐱✨",
@@ -26,10 +27,9 @@ const catDialogues = [
 ];
 
 export default function Home() {
+  const { setBackgroundTheme } = useApiKey();
   const [dailyData, setDailyData] = useState<{ card: TarotCardType; isReversed: boolean } | null>(null);
   const [isDailyFlipped, setIsDailyFlipped] = useState(false);
-  const [particles, setParticles] = useState<{ id: number; left: string; delay: string; duration: string; size: string }[]>([]);
-  const [stars, setStars] = useState<{ id: number; top: string; left: string; delay: string; duration: string; scale: string }[]>([]);
   const [speechIndex, setSpeechIndex] = useState(0);
 
   // Thay đổi lời thoại của Mèo Vàng mỗi 10 giây
@@ -40,75 +40,15 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Generate dynamic particles and stars client-side to avoid hydration mismatches
+  // Set theme & load daily card on mount
   useEffect(() => {
-    // Seeded random daily card
+    setBackgroundTheme('mystic-night');
     const daily = getDailyCard();
     setDailyData(daily);
-
-    // Create background floating dust particles
-    const tempParticles = Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      left: `${Math.random() * 100}%`,
-      delay: `${Math.random() * 5}s`,
-      duration: `${10 + Math.random() * 15}s`,
-      size: `${2 + Math.random() * 4}px`,
-    }));
-    setParticles(tempParticles);
-
-    // Create twinkling stars
-    const tempStars = Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      top: `${Math.random() * 60}%`, // Chỉ ở phần bầu trời trên hero
-      left: `${Math.random() * 100}%`,
-      delay: `${Math.random() * 4}s`,
-      duration: `${2 + Math.random() * 3}s`,
-      scale: `${0.4 + Math.random() * 0.8}`,
-    }));
-    setStars(tempStars);
-  }, []);
+  }, [setBackgroundTheme]);
 
   return (
-    <div className="flex-1 w-full bg-[#0d0d1a] relative overflow-hidden select-none flex flex-col items-center">
-      
-      {/* 🌌 HERO BACKGROUND: DUST PARTICLES & STARS */}
-      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-ghibli-stars opacity-35" />
-      
-      {/* Twinkling Stars */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        {stars.map((star) => (
-          <div
-            key={star.id}
-            className="absolute w-1.5 h-1.5 bg-star-white rounded-full opacity-30"
-            style={{
-              top: star.top,
-              left: star.left,
-              transform: `scale(${star.scale})`,
-              animation: `starTwinkle ${star.duration} ease-in-out infinite`,
-              animationDelay: star.delay,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Floating Dust Particles */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        {particles.map((p) => (
-          <div
-            key={p.id}
-            className="absolute bg-gold-light/45 rounded-full"
-            style={{
-              width: p.size,
-              height: p.size,
-              bottom: '-20px',
-              left: p.left,
-              filter: 'blur(0.5px)',
-              animation: `particleDust ${p.duration} linear infinite`,
-              animationDelay: p.delay,
-            }}
-          />
-        ))}
-      </div>
+    <div className="flex-1 w-full bg-transparent relative overflow-hidden select-none flex flex-col items-center">
 
       {/* 🚀 HERO SECTION */}
       <section className="relative z-10 w-full max-w-5xl px-4 pt-10 md:pt-16 pb-12 flex flex-col items-center text-center gap-6">

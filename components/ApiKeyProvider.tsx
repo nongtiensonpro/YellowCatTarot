@@ -19,6 +19,8 @@ interface ApiKeyContextType {
   setEnableSound: (enable: boolean) => void;
   reduceMotion: boolean;
   setReduceMotion: (reduce: boolean) => void;
+  backgroundTheme: 'mystic-night' | 'enchanted-forest' | 'celestial-dawn';
+  setBackgroundTheme: (theme: 'mystic-night' | 'enchanted-forest' | 'celestial-dawn') => void;
 }
 
 const ApiKeyContext = createContext<ApiKeyContextType | undefined>(undefined);
@@ -34,6 +36,7 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
   const [pickingTheme, _setPickingTheme] = useState<'classic' | 'reflecting-pool' | 'falling-petals'>('classic');
   const [enableSound, _setEnableSound] = useState<boolean>(false); // Mặc định tắt để tránh người dùng giật mình
   const [reduceMotion, _setReduceMotion] = useState<boolean>(false); // Mặc định tắt
+  const [backgroundTheme, setBackgroundTheme] = useState<'mystic-night' | 'enchanted-forest' | 'celestial-dawn'>('mystic-night');
 
   // Load key from sessionStorage on client mount
   useEffect(() => {
@@ -123,6 +126,8 @@ export function ApiKeyProvider({ children }: { children: React.ReactNode }) {
         setEnableSound: updateEnableSound,
         reduceMotion,
         setReduceMotion: updateReduceMotion,
+        backgroundTheme,
+        setBackgroundTheme,
       }}
     >
       {children}

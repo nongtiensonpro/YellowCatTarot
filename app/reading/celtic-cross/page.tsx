@@ -28,8 +28,13 @@ import { useEntropyCollector } from '@/hooks/useEntropyCollector';
 type FlowStep = 'INPUT' | 'SHUFFLING' | 'PICKING' | 'RESULT' | 'INTERPRETING' | 'COMPLETE';
 
 export default function CelticCrossReading() {
-  const { apiKey, shuffleTheme, pickingTheme, reduceMotion } = useApiKey();
+  const { apiKey, shuffleTheme, pickingTheme, reduceMotion, setBackgroundTheme } = useApiKey();
   const spreadType = spreadTypes['celtic-cross'];
+
+  useEffect(() => {
+    setBackgroundTheme('enchanted-forest');
+  }, [setBackgroundTheme]);
+
   const [weatherEffect, setWeatherEffect] = useState<'wind' | 'sun' | 'fog' | null>(null);
 
   // React state
@@ -351,7 +356,7 @@ export default function CelticCrossReading() {
     <div
       onMouseMove={onMouseMove}
       onTouchMove={onTouchMove as any}
-      className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-8 px-4 sm:px-6 lg:px-8 select-none"
+      className="flex-1 w-full bg-transparent py-8 px-4 sm:px-6 lg:px-8 select-none"
     >
       <div className="max-w-7xl mx-auto flex flex-col gap-6">
         

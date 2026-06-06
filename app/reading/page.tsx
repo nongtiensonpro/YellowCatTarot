@@ -1,12 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import YellowCat from '@/components/YellowCat';
+import { useApiKey } from '@/components/ApiKeyProvider';
 
 export default function ReadingHub() {
+  const { setBackgroundTheme } = useApiKey();
+
+  useEffect(() => {
+    setBackgroundTheme('mystic-night');
+  }, [setBackgroundTheme]);
+
   return (
-    <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-8 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
+    <div className="flex-1 w-full bg-transparent py-8 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
       <div className="w-full max-w-4xl flex flex-col gap-8 items-stretch mt-4">
         
         {/* Title */}

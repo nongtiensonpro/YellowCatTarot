@@ -1,11 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import YellowCat from '@/components/YellowCat';
+import { useApiKey } from '@/components/ApiKeyProvider';
 
 export default function MeoVangIntroPage() {
+  const { setBackgroundTheme } = useApiKey();
   const [activeTab, setActiveTab] = useState<'personality' | 'healing' | 'guide' | 'attic'>('personality');
+
+  useEffect(() => {
+    setBackgroundTheme('celestial-dawn');
+  }, [setBackgroundTheme]);
 
   const tabs = [
     { id: 'personality', label: '🐱 Tính Cách Độc Bản', icon: '🐾' },
@@ -15,7 +21,7 @@ export default function MeoVangIntroPage() {
   ] as const;
 
   return (
-    <div className="flex-1 w-full bg-gradient-to-b from-[#0d0d1a] to-[#12122a] py-10 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
+    <div className="flex-1 w-full bg-transparent py-10 px-4 sm:px-6 lg:px-8 select-none flex flex-col items-center">
       <div className="w-full max-w-4xl flex flex-col gap-8 items-stretch animate-[fadeIn_0.4s_ease-out]">
         
         {/* Navigation Breadcrumb */}
