@@ -710,12 +710,15 @@ export default function FreeTarotWorkspace2D({
                 onPointerMove={(event) => {
                   movePan(event);
                   moveCard(event);
+                  moveRotateDrag(event);
                 }}
                 onPointerUp={(event) => {
                   endPan(event);
+                  endRotateDrag(event);
                 }}
                 onPointerCancel={(event) => {
                   endPan(event);
+                  endRotateDrag(event);
                   dragRef.current = null;
                 }}
                 className="relative overflow-hidden touch-none"
@@ -818,8 +821,11 @@ export default function FreeTarotWorkspace2D({
                             onPointerMove={moveRotateDrag}
                             onPointerUp={endRotateDrag}
                             onPointerCancel={endRotateDrag}
-                            className="absolute -top-4 -right-4 w-8 h-8 rounded-full bg-transparent z-40 select-none touch-none"
-                          />
+                            className="absolute -top-3 -right-3 w-6 h-6 rounded-full bg-gold-primary hover:bg-gold-light border border-bg-deep flex items-center justify-center text-[10px] text-bg-deep font-bold cursor-alias select-none active:scale-90 transition-all shadow-[0_0_8px_rgba(244,162,97,0.4)] z-40 pointer-events-auto touch-none"
+                            title="Kéo để xoay lá bài"
+                          >
+                            ↻
+                          </div>
                         )}
                       </div>
                     </div>
