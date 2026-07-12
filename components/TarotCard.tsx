@@ -14,6 +14,7 @@ interface TarotCardProps {
   onClick?: () => void;
   interactive?: boolean;
   className?: string;
+  deckCardBack?: string;
 }
 
 const sizeClasses = {
@@ -31,6 +32,7 @@ export default function TarotCard({
   onClick,
   interactive = true,
   className = '',
+  deckCardBack,
 }: TarotCardProps) {
   const sizeClass = sizeClasses[size];
 
@@ -63,7 +65,7 @@ export default function TarotCard({
       >
         {/* MẶT SAU LÁ BÀI (Hiện khi rotateY = 0) */}
         <div className="absolute inset-0 w-full h-full backface-hidden z-10">
-          <CardBack />
+          <CardBack deckCardBack={deckCardBack} />
         </div>
 
         {/* MẶT TRƯỚC LÁ BÀI (Hiện khi rotateY = 180, lật ngược trục Y) */}
@@ -88,7 +90,7 @@ export default function TarotCard({
                 fill
                 quality={95}
                 sizes="(max-width: 640px) 240px, (max-width: 1024px) 320px, 440px"
-                className="object-contain"
+                className="object-fill"
                 priority={size === 'lg' || size === 'xl'}
               />
 

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { TarotCard as TarotCardType, getCardById } from '@/lib/cards-data';
+import { TarotCard as TarotCardType } from '@/lib/cards-data';
+import { getDeck } from '@/lib/deck-registry';
 import { useEntropyCollector } from '@/hooks/useEntropyCollector';
 import {
   createNewDeck,
@@ -187,7 +188,9 @@ export default function FreeReadingPage() {
     });
     return map;
   }, [roundsData]);
-  
+  const [selectedDeckId, setSelectedDeckId] = useState<string>('rws');
+  const deckProvider = useMemo(() => getDeck(selectedDeckId), [selectedDeckId]);
+
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   // Picker states
@@ -214,9 +217,14 @@ export default function FreeReadingPage() {
         if (saved) {
           try {
             const parsed = JSON.parse(saved) as any;
+            const savedDeckId = parsed.deckId === 'thoth' ? 'thoth' : (parsed.deckId === 'marseille' ? 'marseille' : (parsed.deckId === 'lenormand' ? 'lenormand' : (parsed.deckId === 'lightseer' ? 'lightseer' : (parsed.deckId === 'modernwitch' ? 'modernwitch' : (parsed.deckId === 'yolo' ? 'yolo' : (parsed.deckId === 'kittycorn' ? 'kittycorn' : (parsed.deckId === 'moonlightsenshi' ? 'moonlightsenshi' : 'rws')))))));
+            setSelectedDeckId(savedDeckId);
+            const provider = getDeck(savedDeckId);
+
             const hydratedCards = (parsed.cards || [])
               .map((savedCard: any) => {
-                const card = getCardById(savedCard.cardId);
+                const cardDeckId = savedCard.deckId || savedDeckId;
+                const card = getDeck(cardDeckId).getById(savedCard.cardId);
                 if (!card) return null;
                 return {
                   id: savedCard.id,
@@ -231,6 +239,7 @@ export default function FreeReadingPage() {
                   label: savedCard.label,
                   note: savedCard.note,
                   locked: savedCard.locked,
+                  deckId: cardDeckId,
                 };
               })
               .filter(Boolean) as FreeDrawnCard[];
@@ -289,10 +298,12 @@ export default function FreeReadingPage() {
       return {
         ...rest,
         cardId: card.id,
+        deckId: workspaceCard.deckId || selectedDeckId,
       };
     });
 
     const payload = {
+      deckId: selectedDeckId,
       currentRound,
       cardsToPickThisRound,
       cards: cardsToSave,
@@ -309,12 +320,17 @@ export default function FreeReadingPage() {
 
     sessionStorage.setItem(FREE_SESSION_STORAGE_KEY, JSON.stringify(payload));
     sessionStorage.setItem('tarot_free_journal', journalNotes);
-  }, [allDrawnCards, cardsToPickThisRound, conversation, currentRound, journalNotes, roundsData]);
+  }, [allDrawnCards, cardsToPickThisRound, conversation, currentRound, journalNotes, roundsData, selectedDeckId]);
 
   // Save journal to sessionStorage on edit
   const handleJournalChange = (text: string) => {
     setJournalNotes(text);
     sessionStorage.setItem('tarot_free_journal', text);
+  };
+
+  const handleDeckChange = (deckId: string) => {
+    if (selectedDeckId === deckId) return;
+    setSelectedDeckId(deckId);
   };
 
   // SHUFFLE PER ROUND
@@ -328,7 +344,7 @@ export default function FreeReadingPage() {
     // If continue mode, bypass hyperShuffle
     if (curRound.deckMode === 'continue' && deckState) {
       setTimeout(() => {
-        const remainingCards = 78 - deckState.drawnCardIds.size;
+        const remainingCards = deckProvider.info.totalCards - deckState.drawnCardIds.size;
         const faceDowns = prepareFaceDownCards(deckState, remainingCards);
         setFaceDownPositions(faceDowns);
         setStep('PICKING');
@@ -349,9 +365,9 @@ export default function FreeReadingPage() {
 
     const finishShuffle = async () => {
       const entropy = stopCollecting();
-      const shuffledOrder = await hyperShuffle(entropy.events, entropy.timings);
+      const shuffledOrder = await hyperShuffle(entropy.events, entropy.timings, deckProvider.info.totalCards);
       const newDeck = createNewDeck(shuffledOrder);
-      const faceDowns = prepareFaceDownCards(newDeck, 78);
+      const faceDowns = prepareFaceDownCards(newDeck, deckProvider.info.totalCards);
 
       setDeckState(newDeck);
       setFaceDownPositions(faceDowns);
@@ -371,7 +387,7 @@ export default function FreeReadingPage() {
 
     try {
       const drawn = userPicksFromFaceDown(deckState, faceDownPositions, displayIdx);
-      const cardType = getCardById(drawn.cardId);
+      const cardType = deckProvider.getById(drawn.cardId);
 
       if (!cardType) return;
 
@@ -391,6 +407,7 @@ export default function FreeReadingPage() {
         label: `${activeRoundData.roundName} · Lá ${newPickCount}`,
         note: '',
         locked: false,
+        deckId: selectedDeckId,
         ...placement,
       };
       setActiveCardId(drawnCard.id);
@@ -413,9 +430,10 @@ export default function FreeReadingPage() {
       if (newPickCount >= cardsToPickThisRound) {
         setStep('SETUP');
       } else {
+        const total = deckProvider.info.totalCards;
         const remainingCount = activeRoundData.deckMode === 'continue'
-          ? 78 - deckState.drawnCardIds.size
-          : 78 - newPickCount;
+          ? total - deckState.drawnCardIds.size
+          : total - newPickCount;
         const faceDowns = prepareFaceDownCards(deckState, remainingCount);
         setFaceDownPositions(faceDowns);
       }
@@ -498,6 +516,7 @@ export default function FreeReadingPage() {
     };
 
     let clipboardText = `🎨 KHÔNG GIAN TRẢI NGHIỆM TAROT TỰ DO\n`;
+    clipboardText += `🃏 Bộ bài đang sử dụng: ${deckProvider.info.nameVi}\n`;
     clipboardText += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     clipboardText += `📅 Thời gian trải bài: ${dateText}\n\n`;
     roundsData.forEach((r) => {
@@ -602,6 +621,114 @@ export default function FreeReadingPage() {
               {/* Settings Content */}
               <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-4 scrollbar-thin select-none">
                 
+                {/* Bộ Bài Đang Dùng */}
+                <div className="flex flex-col gap-2 border-b border-white/5 pb-3">
+                  <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">
+                    Bộ Bài Đang Sử Dụng:
+                  </span>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('rws')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'rws'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      🔮 RWS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('thoth')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'thoth'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      🦅 Thoth
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('marseille')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'marseille'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      ⚜️ TdM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('lenormand')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'lenormand'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      🌿 Lnd
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('lightseer')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'lightseer'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      ☀️ Lst
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('modernwitch')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'modernwitch'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      🧹 MW
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('yolo')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'yolo'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      😎 YOLO
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('kittycorn')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'kittycorn'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      🦄 KC
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeckChange('moonlightsenshi')}
+                      className={`py-2 rounded-lg border text-[9px] font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-0.5 active:scale-95 ${
+                        selectedDeckId === 'moonlightsenshi'
+                          ? 'bg-gold-primary text-bg-deep border-gold-light shadow-[0_0_10px_rgba(244,162,97,0.15)] font-extrabold'
+                          : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'
+                      }`}
+                    >
+                      🌙 Sailor
+                    </button>
+                  </div>
+                </div>
+
                 {/* Tab selector */}
                 <div className="flex flex-col gap-2 border-b border-white/5 pb-3">
                   <span className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">
@@ -831,8 +958,8 @@ export default function FreeReadingPage() {
                 <CardDeck
                   cardsCount={
                     roundsData.find(r => r.roundNumber === currentRound)?.deckMode === 'continue' && deckState
-                      ? 78 - deckState.drawnCardIds.size
-                      : 78 - (roundsData.find(r => r.roundNumber === currentRound)?.cards.length || 0)
+                      ? deckProvider.info.totalCards - deckState.drawnCardIds.size
+                      : deckProvider.info.totalCards - (roundsData.find(r => r.roundNumber === currentRound)?.cards.length || 0)
                   }
                   onSelectCard={handleSelectCard}
                   isShuffling={step === 'SHUFFLING'}
@@ -846,6 +973,7 @@ export default function FreeReadingPage() {
                       (window as any).finishFreeShuffle();
                     }
                   }}
+                  deckCardBack={deckProvider.info.cardBackPath}
                 />
               </div>
             </motion.div>
@@ -1004,14 +1132,19 @@ export default function FreeReadingPage() {
       </AnimatePresence>
 
       {/* inspector Modal */}
-      {selectedCard && (
-        <CardInspector
-          card={selectedCard}
-          isOpen={isInspectorOpen}
-          onClose={() => setIsInspectorOpen(false)}
-          singleCardOnly={true}
-        />
-      )}
+      {selectedCard && (() => {
+        const activeWorkspaceCardForInspector = allDrawnCards.find(c => c.card.id === selectedCard.id);
+        const deckIdForInspector = activeWorkspaceCardForInspector?.deckId || selectedDeckId;
+        return (
+          <CardInspector
+            card={selectedCard}
+            isOpen={isInspectorOpen}
+            onClose={() => setIsInspectorOpen(false)}
+            singleCardOnly={true}
+            deckId={deckIdForInspector}
+          />
+        );
+      })()}
     </div>
   );
 }

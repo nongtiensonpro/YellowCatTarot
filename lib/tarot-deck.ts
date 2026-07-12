@@ -118,10 +118,11 @@ async function buildEntropyFromSources(
 
 export async function hyperShuffle(
   userEvents: Array<{x:number,y:number,dx:number,dy:number,t:number}>,
-  timingJitter: number[]
+  timingJitter: number[],
+  totalCards: number = 78
 ): Promise<number[]> {
 
-  const baseOrder = Array.from({ length: 78 }, (_, i) => i);
+  const baseOrder = Array.from({ length: totalCards }, (_, i) => i);
 
   // Pass 1: User entropy + crypto
   const entropy1 = await buildEntropyFromSources(userEvents, timingJitter);
@@ -199,7 +200,7 @@ export function clearDeck(): void {
 // ─────────────────────────────────────────────
 
 export function drawNextCard(state: DeckState): DrawnCard | null {
-  if (state.nextCardPointer >= 78) return null;
+  if (state.nextCardPointer >= state.shuffledOrder.length) return null;
 
   const cardId = state.shuffledOrder[state.nextCardPointer];
   state.drawnCardIds.add(cardId);
@@ -215,8 +216,9 @@ export function drawMultiple(
   positions: string[]
 ): PositionedCard[] {
   const count = positions.length;
-  if (state.nextCardPointer + count > 78) {
-    throw new Error(`Không đủ lá. Cần ${count} lá nhưng chỉ còn ${78 - state.nextCardPointer}.`);
+  const total = state.shuffledOrder.length;
+  if (state.nextCardPointer + count > total) {
+    throw new Error(`Không đủ lá. Cần ${count} lá nhưng chỉ còn ${total - state.nextCardPointer}.`);
   }
 
   return positions.map((position, i) => {
@@ -233,7 +235,8 @@ export function prepareFaceDownCards(
   state: DeckState,
   displayCount: number = 9
 ): FaceDownPosition[] {
-  const available = 78 - state.nextCardPointer;
+  const total = state.shuffledOrder.length;
+  const available = total - state.nextCardPointer;
   const actualCount = Math.min(displayCount, available);
 
   // Lấy n lá tiếp theo từ deck (chưa mark drawn)
@@ -303,7 +306,7 @@ export function userPicksFromFaceDown(
 // ─────────────────────────────────────────────
 
 export function getRemainingCount(state: DeckState): number {
-  return 78 - state.nextCardPointer;
+  return state.shuffledOrder.length - state.nextCardPointer;
 }
 
 export function hasEnoughCards(state: DeckState, needed: number): boolean {

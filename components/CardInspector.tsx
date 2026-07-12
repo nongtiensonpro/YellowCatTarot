@@ -3,16 +3,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TarotCard, tarotCards } from '@/lib/cards-data';
+import { TarotCard } from '@/lib/cards-data';
+import { getDeck } from '@/lib/deck-registry';
 
 interface CardInspectorProps {
   card: TarotCard;
   isOpen: boolean;
   onClose: () => void;
   singleCardOnly?: boolean;
+  deckId?: string;
 }
 
-export default function CardInspector({ card, isOpen, onClose, singleCardOnly = false }: CardInspectorProps) {
+export default function CardInspector({ card, isOpen, onClose, singleCardOnly = false, deckId = 'rws' }: CardInspectorProps) {
   const [currentCard, setCurrentCard] = useState<TarotCard>(card);
   const [zoomScale, setZoomScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -77,9 +79,10 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
     if (singleCardOnly) return;
     setZoomScale(1);
     setPanOffset({ x: 0, y: 0 });
-    const currentIndex = tarotCards.findIndex((c) => c.id === currentCard.id);
-    const prevIndex = currentIndex > 0 ? currentIndex - 1 : tarotCards.length - 1;
-    setCurrentCard(tarotCards[prevIndex]);
+    const deckProvider = getDeck(deckId);
+    const currentIndex = deckProvider.cards.findIndex((c) => c.id === currentCard.id);
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : deckProvider.cards.length - 1;
+    setCurrentCard(deckProvider.cards[prevIndex]);
   };
 
   // Navigate to next card
@@ -87,9 +90,10 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
     if (singleCardOnly) return;
     setZoomScale(1);
     setPanOffset({ x: 0, y: 0 });
-    const currentIndex = tarotCards.findIndex((c) => c.id === currentCard.id);
-    const nextIndex = currentIndex < tarotCards.length - 1 ? currentIndex + 1 : 0;
-    setCurrentCard(tarotCards[nextIndex]);
+    const deckProvider = getDeck(deckId);
+    const currentIndex = deckProvider.cards.findIndex((c) => c.id === currentCard.id);
+    const nextIndex = currentIndex < deckProvider.cards.length - 1 ? currentIndex + 1 : 0;
+    setCurrentCard(deckProvider.cards[nextIndex]);
   };
 
   const getClampedOffset = (x: number, y: number, scale: number) => {
@@ -363,7 +367,7 @@ export default function CardInspector({ card, isOpen, onClose, singleCardOnly = 
                   fill
                   unoptimized
                   sizes="100vw"
-                  className="object-contain pointer-events-none"
+                  className="object-fill pointer-events-none"
                   priority
                 />
               </motion.div>

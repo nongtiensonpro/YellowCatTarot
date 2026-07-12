@@ -6,9 +6,10 @@ import { useApiKey } from './ApiKeyProvider';
 
 interface CardBackProps {
   className?: string;
+  deckCardBack?: string;
 }
 
-export default function CardBack({ className = '' }: CardBackProps) {
+export default function CardBack({ className = '', deckCardBack }: CardBackProps) {
   const [mounted, setMounted] = useState(false);
   const [randomBackFile, setRandomBackFile] = useState('Waite–Smith_Tarot_Roses_and_Lilies_cropped.jpg');
 
@@ -36,6 +37,33 @@ export default function CardBack({ className = '' }: CardBackProps) {
     const randomIndex = Math.floor(Math.random() * files.length);
     setRandomBackFile(files[randomIndex]);
   }, []);
+
+  // 0. Custom deck card back overrides everything else except ghibli-svg if chosen
+  if (deckCardBack && preferredCardBack !== 'ghibli-svg') {
+    return (
+      <div
+        className={`relative w-full h-full rounded-2xl border-2 border-gold-light/60 overflow-hidden bg-[#0d0d1a] flex items-center justify-center select-none group ${className}`}
+        style={{
+          boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.6), 0 0 10px rgba(244, 162, 97, 0.15)',
+        }}
+      >
+        <Image
+          src={deckCardBack}
+          alt="Mặt sau lá bài Tarot"
+          fill
+          sizes="(max-width: 640px) 150px, 300px"
+          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          priority
+        />
+        <div className="absolute inset-1.5 rounded-[10px] border border-gold-primary/30 pointer-events-none" />
+        <div className="absolute top-3 left-3 w-3 h-3 border-t border-l border-gold-light/40 rounded-tl pointer-events-none" />
+        <div className="absolute top-3 right-3 w-3 h-3 border-t border-r border-gold-light/40 rounded-tr pointer-events-none" />
+        <div className="absolute bottom-3 left-3 w-3 h-3 border-b border-l border-gold-light/40 rounded-bl pointer-events-none" />
+        <div className="absolute bottom-3 right-3 w-3 h-3 border-b border-r border-gold-light/40 rounded-br pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-60 pointer-events-none" />
+      </div>
+    );
+  }
 
   // 1. Mặt sau dạng SVG Ghibli hoạt họa nếu được chọn
   if (preferredCardBack === 'ghibli-svg') {

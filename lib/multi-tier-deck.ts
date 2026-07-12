@@ -14,6 +14,7 @@ export interface MultiRoundCard {
   label?: string;
   note?: string;
   locked?: boolean;
+  deckId?: string;
 }
 
 export interface TierRound {

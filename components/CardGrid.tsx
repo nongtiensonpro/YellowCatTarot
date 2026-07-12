@@ -8,9 +8,10 @@ import TarotCard from './TarotCard';
 
 interface CardGridProps {
   cards: TarotCardType[];
+  deckId?: string;
 }
 
-export default function CardGrid({ cards }: CardGridProps) {
+export default function CardGrid({ cards, deckId }: CardGridProps) {
   if (cards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -39,6 +40,7 @@ export default function CardGrid({ cards }: CardGridProps) {
 
   return (
     <motion.div
+      key={deckId || 'rws'}
       variants={containerVariants as any}
       initial="hidden"
       animate="show"
@@ -46,11 +48,11 @@ export default function CardGrid({ cards }: CardGridProps) {
     >
       {cards.map((card) => (
         <motion.div
-          key={card.id}
+          key={`${deckId || 'rws'}-${card.id}`}
           variants={itemVariants as any}
           className="flex flex-col items-center group"
         >
-          <Link href={`/cards/${card.slug}`} className="block relative focus:outline-none">
+          <Link href={`/cards/${card.slug}${deckId === 'rws' ? '' : `?deck=${deckId}`}`} className="block relative focus:outline-none">
             {/* Card display wrapper with hover glow and float */}
             <div className="relative transform transition-all duration-300 group-hover:-translate-y-2 group-hover:drop-shadow-[0_0_15px_var(--color-gold-glow)]">
               <TarotCard
@@ -66,10 +68,12 @@ export default function CardGrid({ cards }: CardGridProps) {
           {/* Card Label info */}
           <div className="mt-3 text-center flex flex-col items-center">
             <span className="text-[10px] text-gold-light/60 font-sans tracking-widest uppercase mb-0.5">
-              {card.arcana === 'major' ? `Bí Ẩn Major #${card.number}` : `${card.suit}`}
+              {card.arcana === 'major' 
+                ? `Bí Ẩn Major #${card.number}` 
+                : card.suit === 'pentacles' ? (deckId === 'thoth' ? 'disks' : (deckId === 'marseille' ? 'deniers' : 'pentacles')) : card.suit}
             </span>
             <Link
-              href={`/cards/${card.slug}`}
+              href={`/cards/${card.slug}${deckId === 'rws' ? '' : `?deck=${deckId}`}`}
               className="text-text-primary group-hover:text-gold-light font-cinzel font-semibold text-sm transition-colors duration-200 tracking-wide"
             >
               {card.nameVi}

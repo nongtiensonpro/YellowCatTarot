@@ -3,7 +3,8 @@
 import React, { use, useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getCardBySlug, tarotCards, TarotCard as TarotCardType } from '@/lib/cards-data';
+import { TarotCard as TarotCardType } from '@/lib/cards-data';
+import { getDeck } from '@/lib/deck-registry';
 import { getCardDetailBySlug } from '@/lib/cards-details';
 import TarotCard from '@/components/TarotCard';
 import { useApiKey } from '@/components/ApiKeyProvider';
@@ -13,13 +14,41 @@ import CardInspector from '@/components/CardInspector';
 
 interface PageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ deck?: string }>;
 }
 
-export default function CardDetailPage({ params }: PageProps) {
+export default function CardDetailPage({ params, searchParams }: PageProps) {
   const router = useRouter();
   const { slug } = use(params);
-  const card = useMemo(() => getCardBySlug(slug), [slug]);
-  const deepDetail = useMemo(() => getCardDetailBySlug(slug), [slug]);
+  const searchParamsResolved = use(searchParams);
+  const deckId = searchParamsResolved.deck === 'thoth' ? 'thoth' : (searchParamsResolved.deck === 'marseille' ? 'marseille' : (searchParamsResolved.deck === 'lenormand' ? 'lenormand' : (searchParamsResolved.deck === 'lightseer' ? 'lightseer' : (searchParamsResolved.deck === 'modernwitch' ? 'modernwitch' : (searchParamsResolved.deck === 'yolo' ? 'yolo' : (searchParamsResolved.deck === 'kittycorn' ? 'kittycorn' : (searchParamsResolved.deck === 'moonlightsenshi' ? 'moonlightsenshi' : 'rws')))))));
+
+  const deckProvider = useMemo(() => getDeck(deckId), [deckId]);
+  const card = useMemo(() => deckProvider.getBySlug(slug), [deckProvider, slug]);
+  const deepDetail = useMemo(() => {
+    if (deckId === 'rws' || deckId === 'lightseer' || deckId === 'modernwitch' || deckId === 'yolo' || deckId === 'kittycorn' || deckId === 'moonlightsenshi') {
+      return getCardDetailBySlug(slug);
+    }
+    if (!card) return null;
+    return {
+      slug: card.slug,
+      generalOverview: card.meaningUpright,
+      symbolism: `Hình ảnh lá bài mang nét nghệ thuật đặc trưng của bộ bài ${deckProvider.info.nameVi}.`,
+      upright: {
+        general: card.meaningUpright,
+        career: `Năng lượng chiều xuôi của ${card.nameVi} trong công việc: Biểu thị các vận hội thực tế, sự phát triển hoặc thời cơ chín muồi để thực thi kế hoạch.`,
+        love: `Trong tình cảm: Đem lại thông điệp về sự gắn kết, hòa hợp chia sẻ hoặc những chuyển biến cảm xúc tích cực.`,
+        health: `Về sức khỏe & tinh thần: Năng lượng điều hòa dồi dào, khuyên bạn duy trì lối sống lành mạnh chừng mực.`,
+      },
+      reversed: {
+        general: card.meaningReversed,
+        career: `Năng lượng chiều ngược trong công việc: Khuyên bạn đề phòng sự trì trệ, xung đột ý kiến hoặc phân tán nguồn lực không đáng có.`,
+        love: `Trong tình cảm: Cảnh báo sự hiểu lầm nhỏ, thiếu chia sẻ thấu hiểu hoặc rào cản giao tiếp cần kiên nhẫn tháo gỡ.`,
+        health: `Về sức khỏe & tinh thần: Lưu ý trạng thái căng thẳng mệt mỏi, nên dành thời gian nghỉ ngơi nạp lại năng lượng sống.`,
+      },
+      advice: `Lời nhắn từ Mèo Vàng: Hãy tin tưởng vào thông điệp mà lá ${card.nameVi} (${card.nameEn}) mang lại và luôn vững vàng hướng về phía ánh sáng tươi đẹp phía trước nhé quý nhân!`
+    };
+  }, [deckId, slug, card, deckProvider]);
   const { apiKey, setBackgroundTheme } = useApiKey();
 
   useEffect(() => {
@@ -56,9 +85,9 @@ export default function CardDetailPage({ params }: PageProps) {
   }
 
   // Find previous and next card for navigation
-  const currentIndex = tarotCards.findIndex((c) => c.id === card.id);
-  const prevCard = currentIndex > 0 ? tarotCards[currentIndex - 1] : null;
-  const nextCard = currentIndex < tarotCards.length - 1 ? tarotCards[currentIndex + 1] : null;
+  const currentIndex = deckProvider.cards.findIndex((c) => c.id === card.id);
+  const prevCard = currentIndex > 0 ? deckProvider.cards[currentIndex - 1] : null;
+  const nextCard = currentIndex < deckProvider.cards.length - 1 ? deckProvider.cards[currentIndex + 1] : null;
 
   // Ask Mèo Vàng AI about this card
   const handleAskMèoVàng = async (e: React.FormEvent) => {
@@ -126,7 +155,7 @@ export default function CardDetailPage({ params }: PageProps) {
               Trang Chủ
             </Link>
             <span>/</span>
-            <Link href="/cards" className="hover:text-gold-light transition-colors">
+            <Link href={`/cards${deckId === 'rws' ? '' : `?deck=${deckId}`}`} className="hover:text-gold-light transition-colors">
               Thư Viện Bài
             </Link>
             <span>/</span>
@@ -137,7 +166,7 @@ export default function CardDetailPage({ params }: PageProps) {
           <div className="flex gap-3">
             {prevCard && (
               <Link
-                href={`/cards/${prevCard.slug}`}
+                href={`/cards/${prevCard.slug}${deckId === 'rws' ? '' : `?deck=${deckId}`}`}
                 className="px-3 py-1.5 rounded-lg bg-bg-surface border border-gold-primary/10 text-text-secondary hover:text-gold-light hover:border-gold-primary/40 transition-all flex items-center gap-1 font-semibold"
               >
                 ◀ {prevCard.nameVi}
@@ -145,7 +174,7 @@ export default function CardDetailPage({ params }: PageProps) {
             )}
             {nextCard && (
               <Link
-                href={`/cards/${nextCard.slug}`}
+                href={`/cards/${nextCard.slug}${deckId === 'rws' ? '' : `?deck=${deckId}`}`}
                 className="px-3 py-1.5 rounded-lg bg-bg-surface border border-gold-primary/10 text-text-secondary hover:text-gold-light hover:border-gold-primary/40 transition-all flex items-center gap-1 font-semibold"
               >
                 {nextCard.nameVi} ▶
@@ -168,6 +197,7 @@ export default function CardDetailPage({ params }: PageProps) {
                 size="lg"
                 interactive={true}
                 onClick={() => setIsFlipped(!isFlipped)}
+                deckCardBack={deckProvider.info.cardBackPath}
               />
             </div>
 
@@ -205,17 +235,17 @@ export default function CardDetailPage({ params }: PageProps) {
               <div>
                 <span className="text-text-secondary">Thuộc bộ:</span>{' '}
                 <span className="font-sans font-bold text-gold-light uppercase tracking-wider">
-                  {card.arcana === 'major' ? 'Đại Bí Ẩn (Major)' : 'Tiểu Bí Ẩn (Minor)'}
+                  {deckId === 'lenormand' ? '🌿 Tiên Tri (Lenormand)' : (card.arcana === 'major' ? 'Đại Bí Ẩn (Major)' : 'Tiểu Bí Ẩn (Minor)')}
                 </span>
               </div>
               {card.suit && (
                 <div>
                   <span className="text-text-secondary">Chất bài:</span>{' '}
                   <span className="font-sans font-bold text-gold-light uppercase tracking-wider">
-                    {card.suit === 'wands' && '🔥 Quyền Trượng'}
-                    {card.suit === 'cups' && '💧 Thánh Bôi'}
-                    {card.suit === 'swords' && '⚔️ Kiếm'}
-                    {card.suit === 'pentacles' && '🪙 Tiền Vàng'}
+                    {card.suit === 'wands' && (deckId === 'marseille' ? '🔥 Gậy (Bâtons)' : '🔥 Quyền Trượng (Wands)')}
+                    {card.suit === 'cups' && (deckId === 'marseille' ? '💧 Chén (Coupes)' : '💧 Thánh Bôi (Cups)')}
+                    {card.suit === 'swords' && (deckId === 'marseille' ? '⚔️ Kiếm (Épées)' : '⚔️ Kiếm (Swords)')}
+                    {card.suit === 'pentacles' && (deckId === 'thoth' ? '🪙 Đĩa Tròn (Disks)' : (deckId === 'marseille' ? '🪙 Đồng Tiền (Deniers)' : '🪙 Tiền Vàng (Pentacles)'))}
                   </span>
                 </div>
               )}

@@ -21,6 +21,7 @@ interface CardDeckProps {
   weatherEffect?: 'wind' | 'sun' | 'fog' | null;
   reduceMotion?: boolean;
   onStopShuffle?: () => void;
+  deckCardBack?: string;
 }
 
 export default function CardDeck({
@@ -33,6 +34,7 @@ export default function CardDeck({
   weatherEffect = null,
   reduceMotion = false,
   onStopShuffle,
+  deckCardBack,
 }: CardDeckProps) {
   const { enableSound } = useApiKey();
   const [deck, setDeck] = useState<number[]>([]);
@@ -250,7 +252,7 @@ export default function CardDeck({
                 zIndex: isDeckSpread ? index : undefined,
               }}
             >
-              <CardBack className="border-gold-light/40 group-hover:border-gold-light transition-all duration-300" />
+              <CardBack className="border-gold-light/40 group-hover:border-gold-light transition-all duration-300" deckCardBack={deckCardBack} />
             </motion.div>
           );
         })}

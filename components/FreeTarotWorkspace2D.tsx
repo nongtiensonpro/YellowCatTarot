@@ -18,6 +18,7 @@ export interface FreeWorkspaceCard {
   label?: string;
   note?: string;
   locked?: boolean;
+  deckId?: string;
 }
 
 interface FreeTarotWorkspace2DProps {

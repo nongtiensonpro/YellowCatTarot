@@ -9,6 +9,7 @@ interface FilterBarProps {
   onArcanaChange: (arcana: 'all' | 'major' | 'minor') => void;
   onSuitChange: (suit: 'all' | 'wands' | 'cups' | 'swords' | 'pentacles') => void;
   onSearchChange: (query: string) => void;
+  deckId?: string;
 }
 
 export default function FilterBar({
@@ -18,7 +19,50 @@ export default function FilterBar({
   onArcanaChange,
   onSuitChange,
   onSearchChange,
+  deckId,
 }: FilterBarProps) {
+  if (deckId === 'lenormand') {
+    return (
+      <div className="w-full bg-bg-surface/50 backdrop-blur-md border border-gold-primary/20 rounded-2xl p-5 md:p-6 mb-8 flex flex-col gap-4 shadow-xl">
+        <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] md:text-xs font-sans text-gold-light font-semibold uppercase tracking-widest">
+              🌿 Lenormand Oracle
+            </span>
+            <span className="text-xs font-lora text-text-secondary italic">
+              36 lá bài biểu tượng cổ điển truyền thống châu Âu
+            </span>
+          </div>
+          <div className="relative flex-1 max-w-md">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-secondary/70">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-4 h-4"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.637 10.636z"
+                />
+              </svg>
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Tìm kiếm lá bài Lenormand..."
+              className="w-full bg-bg-elevated/50 border border-gold-primary/20 focus:border-gold-light focus:outline-none rounded-xl pl-10 pr-4 py-2 text-xs md:text-sm font-lora text-text-primary placeholder:text-text-secondary/50 focus:shadow-[0_0_12px_var(--color-gold-glow)] transition-all duration-200"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full bg-bg-surface/50 backdrop-blur-md border border-gold-primary/20 rounded-2xl p-5 md:p-6 mb-8 flex flex-col gap-4 shadow-xl">
       {/* Row 1: Arcana Filter & Search */}
@@ -110,7 +154,7 @@ export default function FilterBar({
                   : 'bg-bg-elevated/30 text-text-secondary border border-transparent hover:border-gold-primary/20 hover:text-text-primary'
               }`}
             >
-              🔥 Quyền Trượng (Wands)
+              {deckId === 'marseille' ? '🔥 Gậy (Bâtons)' : '🔥 Quyền Trượng (Wands)'}
             </button>
             <button
               onClick={() => onSuitChange('cups')}
@@ -120,7 +164,7 @@ export default function FilterBar({
                   : 'bg-bg-elevated/30 text-text-secondary border border-transparent hover:border-gold-primary/20 hover:text-text-primary'
               }`}
             >
-              💧 Thánh Bôi (Cups)
+              {deckId === 'marseille' ? '💧 Chén (Coupes)' : '💧 Thánh Bôi (Cups)'}
             </button>
             <button
               onClick={() => onSuitChange('swords')}
@@ -130,7 +174,7 @@ export default function FilterBar({
                   : 'bg-bg-elevated/30 text-text-secondary border border-transparent hover:border-gold-primary/20 hover:text-text-primary'
               }`}
             >
-              ⚔️ Kiếm (Swords)
+              {deckId === 'marseille' ? '⚔️ Kiếm (Épées)' : '⚔️ Kiếm (Swords)'}
             </button>
             <button
               onClick={() => onSuitChange('pentacles')}
@@ -140,7 +184,7 @@ export default function FilterBar({
                   : 'bg-bg-elevated/30 text-text-secondary border border-transparent hover:border-gold-primary/20 hover:text-text-primary'
               }`}
             >
-              🪙 Tiền Vàng (Pentacles)
+              {deckId === 'thoth' ? '🪙 Đĩa Tròn (Disks)' : (deckId === 'marseille' ? '🪙 Đồng Tiền (Deniers)' : '🪙 Tiền Vàng (Pentacles)')}
             </button>
           </div>
         </div>
