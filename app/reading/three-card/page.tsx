@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getRandomCards, TarotCard as TarotCardType } from '@/lib/cards-data';
 import { spreadTypes } from '@/lib/spreads';
 import { interpretCards, CardReading, createUserPrompt } from '@/lib/gemini';
@@ -336,123 +337,144 @@ export default function ThreeCardReading() {
 
           {/* BOTTOM COLUMN: Table and cards */}
           <div className="w-full flex flex-col gap-6 items-stretch relative z-10">
-            
-            {/* STEP 1: INPUT QUESTION */}
-            {step === 'INPUT' && (
-              <div className="bg-bg-surface/40 border border-gold-primary/15 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-[fadeIn_0.3s_ease-out]">
-                <h3 className="font-cinzel text-base md:text-lg text-gold-light font-bold tracking-wide">
-                  💬 Gửi Trực Giác Của Bạn Vào Câu Hỏi Thời Gian
-                </h3>
-                
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs text-text-secondary font-sans uppercase tracking-wider font-semibold">
-                    Nhập chủ đề/câu hỏi thời gian của bạn (Ví dụ: Sự nghiệp năm nay của tôi...)
-                  </label>
-                  <textarea
-                    value={userQuestion}
-                    onChange={(e) => setUserQuestion(e.target.value)}
-                    placeholder="Nhập câu hỏi để Mèo Vàng kết hợp xâu chuỗi thông điệp 3 lá một cách chính xác nhất nhé..."
-                    className="w-full h-24 bg-bg-elevated/40 border border-gold-primary/10 focus:border-gold-light focus:outline-none rounded-xl p-4 text-xs md:text-sm font-lora text-text-primary placeholder:text-text-secondary/40 focus:shadow-[0_0_12px_var(--color-gold-glow)] transition-all resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleStartShuffle}
-                  className="w-full py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_15px_var(--color-gold-glow)] flex items-center justify-center gap-2"
+            <AnimatePresence mode="wait">
+              {/* STEP 1: INPUT QUESTION */}
+              {step === 'INPUT' && (
+                <motion.div
+                  key="step-input"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="bg-bg-surface/40 border border-gold-primary/15 rounded-2xl p-6 shadow-xl flex flex-col gap-5"
                 >
-                  <span>🃏 Bắt Đầu Xáo Bài</span>
-                </button>
-              </div>
-            )}
-
-            {/* STEP 2: SHUFFLING & CARD DECK */}
-            {(step === 'SHUFFLING' || step === 'PICKING') && (
-              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
-                {/* Magic bg rings */}
-                <div className="absolute w-[300px] h-[300px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_60s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                
-                {/* Đã chuyển Tiến trình và Rút Nhanh sang cạnh Mèo Vàng ở cột trái */}
-
-                <CardDeck
-                  cardsCount={deckCount}
-                  onSelectCard={handleSelectCard}
-                  isShuffling={step === 'SHUFFLING'}
-                  isDeckSpread={step === 'PICKING'}
-                  shuffleTheme={shuffleTheme}
-                  pickingTheme={pickingTheme}
-                  weatherEffect={weatherEffect}
-                  reduceMotion={reduceMotion}
-                  onStopShuffle={() => {
-                    if ((window as any).finishThreeShuffle) {
-                      (window as any).finishThreeShuffle();
-                    }
-                  }}
-                />
-              </div>
-            )}
-
-            {/* STEP 3: RESULT READING BOARD & AI CALL */}
-            {(step === 'RESULT' || step === 'INTERPRETING' || step === 'COMPLETE') && drawnCards.length > 0 && (
-              <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]">
-                
-                {/* Table board layout */}
-                <div className="bg-bg-surface/35 border border-gold-primary/15 rounded-2xl p-5 shadow-2xl flex flex-col gap-5 items-center">
-                  <span className="text-[10px] font-sans font-bold text-gold-light/60 uppercase tracking-widest">
-                    Bàn Trải Bài Ba Lá Của Bạn:
-                  </span>
+                  <h3 className="font-cinzel text-base md:text-lg text-gold-light font-bold tracking-wide">
+                    💬 Gửi Trực Giác Của Bạn Vào Câu Hỏi Thời Gian
+                  </h3>
                   
-                  <ReadingBoard
-                    cards={drawnCards}
-                    spreadType={spreadType}
-                    interactive={false}
-                    onInspectCard={(card) => setSelectedInspectCard(card)}
-                    onCardHover={setHoveredCardIdx}
-                  />
-
-                  {step === 'RESULT' && (
-                    <button
-                      onClick={handleGetInterpretation}
-                      disabled={aiLoading}
-                      className="w-full max-w-lg mt-2 py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_12px_var(--color-gold-glow)] flex items-center justify-center gap-1.5"
-                    >
-                      <span>✨ Luận Giải Toàn Bộ Trải Bài</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* AI Interpretation Box */}
-                {(step === 'INTERPRETING' || step === 'COMPLETE') && (
-                  <AIInterpretation
-                    interpretation={aiInterpretation}
-                    loading={aiLoading}
-                    error={aiError}
-                    onRetry={handleGetInterpretation}
-                    spreadInfo={`Trải bài 3 lá (Quá Khứ: ${drawnCards[0].card.nameVi} | Hiện Tại: ${drawnCards[1].card.nameVi} | Tương Lai: ${drawnCards[2].card.nameVi}) ${userQuestion ? `| Câu hỏi: "${userQuestion}"` : ''}`}
-                    userPrompt={userPrompt}
-                  />
-                )}
-
-                {/* Final Complete Tools Menu */}
-                {step === 'COMPLETE' && (
-                  <div className="flex flex-wrap gap-3 justify-center md:justify-end font-sans">
-                    <button
-                      onClick={handleReset}
-                      className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-primary hover:text-gold-light cursor-pointer transition-all"
-                    >
-                      🔄 Rút Trải Bài Khác
-                    </button>
-                    <Link
-                      href="/"
-                      className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
-                    >
-                      🏠 Về Trang Chủ
-                    </Link>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-text-secondary font-sans uppercase tracking-wider font-semibold">
+                      Nhập chủ đề/câu hỏi thời gian của bạn (Ví dụ: Sự nghiệp năm nay của tôi...)
+                    </label>
+                    <textarea
+                      value={userQuestion}
+                      onChange={(e) => setUserQuestion(e.target.value)}
+                      placeholder="Nhập câu hỏi để Mèo Vàng kết hợp xâu chuỗi thông điệp 3 lá một cách chính xác nhất nhé..."
+                      className="w-full h-24 bg-bg-elevated/40 border border-gold-primary/10 focus:border-gold-light focus:outline-none rounded-xl p-4 text-xs md:text-sm font-lora text-text-primary placeholder:text-text-secondary/40 focus:shadow-[0_0_12px_var(--color-gold-glow)] transition-all resize-none"
+                    />
                   </div>
-                )}
 
-              </div>
-            )}
+                  <button
+                    onClick={handleStartShuffle}
+                    className="w-full py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_15px_var(--color-gold-glow)] flex items-center justify-center gap-2"
+                  >
+                    <span>🃏 Bắt Đầu Xáo Bài</span>
+                  </button>
+                </motion.div>
+              )}
 
+              {/* STEP 2: SHUFFLING & CARD DECK */}
+              {(step === 'SHUFFLING' || step === 'PICKING') && (
+                <motion.div
+                  key="step-picking"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible min-h-[380px] md:min-h-[440px]"
+                >
+                  {/* Magic bg rings */}
+                  <div className="absolute w-[300px] h-[300px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_60s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  
+                  {/* Đã chuyển Tiến trình và Rút Nhanh sang cạnh Mèo Vàng ở cột trái */}
+
+                  <CardDeck
+                    cardsCount={deckCount}
+                    onSelectCard={handleSelectCard}
+                    isShuffling={step === 'SHUFFLING'}
+                    isDeckSpread={step === 'PICKING'}
+                    shuffleTheme={shuffleTheme}
+                    pickingTheme={pickingTheme}
+                    weatherEffect={weatherEffect}
+                    reduceMotion={reduceMotion}
+                    onStopShuffle={() => {
+                      if ((window as any).finishThreeShuffle) {
+                        (window as any).finishThreeShuffle();
+                      }
+                    }}
+                  />
+                </motion.div>
+              )}
+
+              {/* STEP 3: RESULT READING BOARD & AI CALL */}
+              {(step === 'RESULT' || step === 'INTERPRETING' || step === 'COMPLETE') && drawnCards.length > 0 && (
+                <motion.div
+                  key="step-result"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex flex-col gap-6"
+                >
+                  
+                  {/* Table board layout */}
+                  <div className="bg-bg-surface/35 border border-gold-primary/15 rounded-2xl p-5 shadow-2xl flex flex-col gap-5 items-center">
+                    <span className="text-[10px] font-sans font-bold text-gold-light/60 uppercase tracking-widest">
+                      Bàn Trải Bài Ba Lá Của Bạn:
+                    </span>
+                    
+                    <ReadingBoard
+                      cards={drawnCards}
+                      spreadType={spreadType}
+                      interactive={false}
+                      onInspectCard={(card) => setSelectedInspectCard(card)}
+                      onCardHover={setHoveredCardIdx}
+                    />
+
+                    {step === 'RESULT' && (
+                      <button
+                        onClick={handleGetInterpretation}
+                        disabled={aiLoading}
+                        className="w-full max-w-lg mt-2 py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_12px_var(--color-gold-glow)] flex items-center justify-center gap-1.5"
+                      >
+                        <span>✨ Luận Giải Toàn Bộ Trải Bài</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* AI Interpretation Box */}
+                  {(step === 'INTERPRETING' || step === 'COMPLETE') && (
+                    <AIInterpretation
+                      interpretation={aiInterpretation}
+                      loading={aiLoading}
+                      error={aiError}
+                      onRetry={handleGetInterpretation}
+                      spreadInfo={`Trải bài 3 lá (Quá Khứ: ${drawnCards[0].card.nameVi} | Hiện Tại: ${drawnCards[1].card.nameVi} | Tương Lai: ${drawnCards[2].card.nameVi}) ${userQuestion ? `| Câu hỏi: "${userQuestion}"` : ''}`}
+                      userPrompt={userPrompt}
+                    />
+                  )}
+
+                  {/* Final Complete Tools Menu */}
+                  {step === 'COMPLETE' && (
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-end font-sans">
+                      <button
+                        onClick={handleReset}
+                        className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-primary hover:text-gold-light cursor-pointer transition-all"
+                      >
+                        🔄 Rút Trải Bài Khác
+                      </button>
+                      <Link
+                        href="/"
+                        className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
+                      >
+                        🏠 Về Trang Chủ
+                      </Link>
+                    </div>
+                  )}
+
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
         </div>

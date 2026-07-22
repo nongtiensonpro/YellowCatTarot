@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import YellowCat, { YellowCatState } from '@/components/YellowCat';
 import { useApiKey } from '@/components/ApiKeyProvider';
 import { TarotCard as TarotCardType, tarotCards, getCardById } from '@/lib/cards-data';
@@ -417,123 +418,144 @@ export default function CelticCrossReading() {
 
           {/* RIGHT COLUMN: Table Interactive Board */}
           <div className="w-full flex flex-col gap-6 items-stretch relative z-10">
-            
-            {/* STEP 1: INPUT QUESTION */}
-            {step === 'INPUT' && (
-              <div className="bg-bg-surface/40 border border-gold-primary/15 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-[fadeIn_0.3s_ease-out]">
-                <h3 className="font-cinzel text-base md:text-lg text-gold-light font-bold tracking-wide flex items-center gap-2">
-                  ⚔️ Sơ Đồ Celtic Cross 10 Lá Kinh Điển
-                </h3>
-                
-                <p className="text-xs font-lora text-text-secondary leading-relaxed italic border-l border-gold-primary/20 pl-3">
-                  Sơ đồ hình Thập Tự phương Tây kết hợp cây Gậy Phép Thuật phía bên phải. Kiểu bói này soi chiếu toàn bộ ngóc ngách cuộc sống của bạn: từ tình thế hiện hữu, rào cản bên ngoài, nền tảng tiềm thức cho tới kết quả tương lai xa lâu dài.
-                </p>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs text-text-secondary font-sans uppercase tracking-wider font-semibold">
-                    Chủ đề hoặc câu hỏi của bạn (Không bắt buộc)
-                  </label>
-                  <textarea
-                    value={userQuestion}
-                    onChange={(e) => setUserQuestion(e.target.value)}
-                    placeholder="Nhập câu hỏi để Mèo Vàng kết nối thông điệp 10 lá bài một cách linh ứng và chính xác nhất nhé..."
-                    className="w-full h-24 bg-bg-elevated/45 border border-gold-primary/10 focus:border-gold-light focus:outline-none rounded-xl p-4 text-xs md:text-sm font-lora text-text-primary placeholder:text-text-secondary/40 focus:shadow-[0_0_12px_var(--color-gold-glow)] transition-all resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleStartShuffle}
-                  className="w-full py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_15px_var(--color-gold-glow)] flex items-center justify-center gap-2 active:scale-99"
+            <AnimatePresence mode="wait">
+              {/* STEP 1: INPUT QUESTION */}
+              {step === 'INPUT' && (
+                <motion.div
+                  key="step-input"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="bg-bg-surface/40 border border-gold-primary/15 rounded-2xl p-6 shadow-xl flex flex-col gap-5"
                 >
-                  <span>🎴 Khởi Tạo Năng Lượng & Xáo Bài</span>
-                </button>
-              </div>
-            )}
+                  <h3 className="font-cinzel text-base md:text-lg text-gold-light font-bold tracking-wide flex items-center gap-2">
+                    ⚔️ Sơ Đồ Celtic Cross 10 Lá Kinh Điển
+                  </h3>
+                  
+                  <p className="text-xs font-lora text-text-secondary leading-relaxed italic border-l border-gold-primary/20 pl-3">
+                    Sơ đồ hình Thập Tự phương Tây kết hợp cây Gậy Phép Thuật phía bên phải. Kiểu bói này soi chiếu toàn bộ ngóc ngách cuộc sống của bạn: từ tình thế hiện hữu, rào cản bên ngoài, nền tảng tiềm thức cho tới kết quả tương lai xa lâu dài.
+                  </p>
 
-            {/* STEP 2: SHUFFLING & CARD DECK */}
-            {(step === 'SHUFFLING' || step === 'PICKING') && (
-              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
-                {/* Magic background concentric rings */}
-                <div className="absolute w-[320px] h-[320px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_80s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                <div className="absolute w-[200px] h-[200px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_40s_linear_infinite_reverse] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-
-                {/* Đã chuyển Tiến trình và Rút Nhanh sang cạnh Mèo Vàng ở cột trái */}
-
-                <CardDeck
-                  cardsCount={faceDownCards.length}
-                  onSelectCard={handleSelectCard}
-                  isShuffling={step === 'SHUFFLING'}
-                  isDeckSpread={step === 'PICKING'}
-                  shuffleTheme={shuffleTheme}
-                  pickingTheme={pickingTheme}
-                  weatherEffect={weatherEffect}
-                  reduceMotion={reduceMotion}
-                  onStopShuffle={() => {
-                    if ((window as any).finishCelticShuffle) {
-                      (window as any).finishCelticShuffle();
-                    }
-                  }}
-                />
-              </div>
-            )}
-
-            {/* STEP 3: INTERACTIVE CELTIC CROSS BOARD */}
-            {(step === 'RESULT' || step === 'INTERPRETING' || step === 'COMPLETE') && drawnCards.length > 0 && (
-              <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]">
-                
-                {/* Table board layout — Modern glassmorphism */}
-                <div className="relative bg-white/[0.02] border border-white/[0.05] rounded-3xl p-4 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col gap-3 items-center overflow-hidden">
-                  {/* Decorative top accent */}
-                  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-primary/20 to-transparent" />
-
-                  <div className="w-full flex justify-between items-center pb-3 border-b border-white/[0.04]">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-gold-primary/40 animate-pulse" />
-                      <span className="text-[9px] sm:text-[10px] font-sans font-bold text-gold-light/50 uppercase tracking-[0.15em]">
-                        Sơ Đồ Celtic Cross
-                      </span>
-                    </div>
-                    
-                    <button
-                      onClick={handleRevealAll}
-                      className="px-3 py-1.5 text-[9px] sm:text-[10px] font-sans font-semibold uppercase tracking-wider rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-gold-primary/25 text-gold-light/70 hover:text-gold-light transition-all cursor-pointer backdrop-blur-sm"
-                    >
-                      🔄 Lật Mở Sơ Đồ
-                    </button>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-text-secondary font-sans uppercase tracking-wider font-semibold">
+                      Chủ đề hoặc câu hỏi của bạn (Không bắt buộc)
+                    </label>
+                    <textarea
+                      value={userQuestion}
+                      onChange={(e) => setUserQuestion(e.target.value)}
+                      placeholder="Nhập câu hỏi để Mèo Vàng kết nối thông điệp 10 lá bài một cách linh ứng và chính xác nhất nhé..."
+                      className="w-full h-24 bg-bg-elevated/45 border border-gold-primary/10 focus:border-gold-light focus:outline-none rounded-xl p-4 text-xs md:text-sm font-lora text-text-primary placeholder:text-text-secondary/40 focus:shadow-[0_0_12px_var(--color-gold-glow)] transition-all resize-none"
+                    />
                   </div>
 
-                  <CelticCrossBoard
-                    cards={drawnCards}
-                    interactive={false}
-                    onInspectCard={(card) => setSelectedInspectCard(card)}
-                  />
+                  <button
+                    onClick={handleStartShuffle}
+                    className="w-full py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_15px_var(--color-gold-glow)] flex items-center justify-center gap-2 active:scale-99"
+                  >
+                    <span>🎴 Khởi Tạo Năng Lượng & Xáo Bài</span>
+                  </button>
+                </motion.div>
+              )}
 
-                  {step === 'RESULT' && (
-                    <button
-                      onClick={handleGetInterpretation}
-                      disabled={aiLoading || drawnCards.some(c => !c.isFlipped)}
-                      className="w-full max-w-md mt-3 py-3.5 font-sans font-bold text-xs sm:text-sm uppercase tracking-widest rounded-2xl bg-gradient-to-r from-gold-primary to-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_20px_rgba(244,162,97,0.25)] hover:shadow-[0_0_30px_rgba(244,162,97,0.4)] flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none active:scale-[0.98]"
-                    >
-                      <span>✨ Xin Luận Giải Celtic Cross</span>
-                    </button>
+              {/* STEP 2: SHUFFLING & CARD DECK */}
+              {(step === 'SHUFFLING' || step === 'PICKING') && (
+                <motion.div
+                  key="step-picking"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible min-h-[380px] md:min-h-[440px]"
+                >
+                  {/* Magic background concentric rings */}
+                  <div className="absolute w-[320px] h-[320px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_80s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  <div className="absolute w-[200px] h-[200px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_40s_linear_infinite_reverse] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+
+                  {/* Đã chuyển Tiến trình và Rút Nhanh sang cạnh Mèo Vàng ở cột trái */}
+
+                  <CardDeck
+                    cardsCount={faceDownCards.length}
+                    onSelectCard={handleSelectCard}
+                    isShuffling={step === 'SHUFFLING'}
+                    isDeckSpread={step === 'PICKING'}
+                    shuffleTheme={shuffleTheme}
+                    pickingTheme={pickingTheme}
+                    weatherEffect={weatherEffect}
+                    reduceMotion={reduceMotion}
+                    onStopShuffle={() => {
+                      if ((window as any).finishCelticShuffle) {
+                        (window as any).finishCelticShuffle();
+                      }
+                    }}
+                  />
+                </motion.div>
+              )}
+
+              {/* STEP 3: INTERACTIVE CELTIC CROSS BOARD */}
+              {(step === 'RESULT' || step === 'INTERPRETING' || step === 'COMPLETE') && drawnCards.length > 0 && (
+                <motion.div
+                  key="step-result"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex flex-col gap-6"
+                >
+                  
+                  {/* Table board layout — Modern glassmorphism */}
+                  <div className="relative bg-white/[0.02] border border-white/[0.05] rounded-3xl p-4 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col gap-3 items-center overflow-hidden">
+                    {/* Decorative top accent */}
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold-primary/20 to-transparent" />
+
+                    <div className="w-full flex justify-between items-center pb-3 border-b border-white/[0.04]">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-gold-primary/40 animate-pulse" />
+                        <span className="text-[9px] sm:text-[10px] font-sans font-bold text-gold-light/50 uppercase tracking-[0.15em]">
+                          Sơ Đồ Celtic Cross
+                        </span>
+                      </div>
+                      
+                      <button
+                        onClick={handleRevealAll}
+                        className="px-3 py-1.5 text-[9px] sm:text-[10px] font-sans font-semibold uppercase tracking-wider rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-gold-primary/25 text-gold-light/70 hover:text-gold-light transition-all cursor-pointer backdrop-blur-sm"
+                      >
+                        🔄 Lật Mở Sơ Đồ
+                      </button>
+                    </div>
+
+                    <CelticCrossBoard
+                      cards={drawnCards}
+                      interactive={false}
+                      onInspectCard={(card) => setSelectedInspectCard(card)}
+                    />
+
+                    {step === 'RESULT' && (
+                      <button
+                        onClick={handleGetInterpretation}
+                        disabled={aiLoading || drawnCards.some(c => !c.isFlipped)}
+                        className="w-full max-w-md mt-3 py-3.5 font-sans font-bold text-xs sm:text-sm uppercase tracking-widest rounded-2xl bg-gradient-to-r from-gold-primary to-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_20px_rgba(244,162,97,0.25)] hover:shadow-[0_0_30px_rgba(244,162,97,0.4)] flex items-center justify-center gap-2 disabled:opacity-30 disabled:pointer-events-none active:scale-[0.98]"
+                      >
+                        <span>✨ Xin Luận Giải Celtic Cross</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* AI Interpretation Box */}
+                  {(step === 'INTERPRETING' || step === 'COMPLETE') && (
+                    <AIInterpretation
+                      interpretation={aiInterpretation}
+                      loading={aiLoading}
+                      error={aiError}
+                      onRetry={handleGetInterpretation}
+                      spreadInfo={`Trải bài Celtic Cross 10 lá: (1. Hiện tại: ${drawnCards[0].card.nameVi} | 2. Thách thức: ${drawnCards[1].card.nameVi} | 3. Ý thức: ${drawnCards[2].card.nameVi} | 4. Tiềm thức: ${drawnCards[3].card.nameVi} | 5. Quá khứ: ${drawnCards[4].card.nameVi} | 6. Tương lai gần: ${drawnCards[5].card.nameVi} | 7. Bản thân: ${drawnCards[6].card.nameVi} | 8. Môi trường: ${drawnCards[7].card.nameVi} | 9. Hy vọng/Sợ: ${drawnCards[8].card.nameVi} | 10. Kết quả: ${drawnCards[9].card.nameVi}) ${userQuestion ? `| Câu hỏi: "${userQuestion}"` : ''}`}
+                      userPrompt={userPrompt}
+                    />
                   )}
-                </div>
 
-                {/* AI Interpretation Box */}
-                {(step === 'INTERPRETING' || step === 'COMPLETE') && (
-                  <AIInterpretation
-                    interpretation={aiInterpretation}
-                    loading={aiLoading}
-                    error={aiError}
-                    onRetry={handleGetInterpretation}
-                    spreadInfo={`Trải bài Celtic Cross 10 lá: (1. Hiện tại: ${drawnCards[0].card.nameVi} | 2. Thách thức: ${drawnCards[1].card.nameVi} | 3. Ý thức: ${drawnCards[2].card.nameVi} | 4. Tiềm thức: ${drawnCards[3].card.nameVi} | 5. Quá khứ: ${drawnCards[4].card.nameVi} | 6. Tương lai gần: ${drawnCards[5].card.nameVi} | 7. Bản thân: ${drawnCards[6].card.nameVi} | 8. Môi trường: ${drawnCards[7].card.nameVi} | 9. Hy vọng/Sợ: ${drawnCards[8].card.nameVi} | 10. Kết quả: ${drawnCards[9].card.nameVi}) ${userQuestion ? `| Câu hỏi: "${userQuestion}"` : ''}`}
-                    userPrompt={userPrompt}
-                  />
-                )}
-
-              </div>
-            )}
-
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
         </div>

@@ -24,6 +24,7 @@ export interface TierRound {
   cards: MultiRoundCard[];          // Drawn cards in this round
   deckMode: 'fresh' | 'continue'; // Reset deck or continue drawing
   maxCards: number;                // Max cards limit for this round (1-20)
+  activeLayoutPreset?: string;     // Active layout preset ID (e.g. "three-card", "celtic-cross")
 }
 
 export interface MultiTierState {

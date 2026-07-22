@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { getRandomCards, TarotCard as TarotCardType } from '@/lib/cards-data';
 import { spreadTypes } from '@/lib/spreads';
 import { interpretCards, createUserPrompt } from '@/lib/gemini';
@@ -236,162 +237,183 @@ export default function SingleCardReading() {
 
           {/* BOTTOM WORKBOARD: Table and cards interaction */}
           <div className="w-full flex flex-col gap-6 items-stretch relative z-10">
-            
-            {/* STEP 1: INPUT QUESTION */}
-            {step === 'INPUT' && (
-              <div className="bg-bg-surface/40 border border-gold-primary/15 rounded-2xl p-6 shadow-xl flex flex-col gap-5 animate-[fadeIn_0.3s_ease-out]">
-                <h3 className="font-cinzel text-base md:text-lg text-gold-light font-bold tracking-wide">
-                  💬 Gửi Trực Giác Của Bạn Vào Câu Hỏi
-                </h3>
-                
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs text-text-secondary font-sans uppercase tracking-wider font-semibold">
-                    Bạn muốn hỏi vũ trụ điều gì? (Không bắt buộc)
-                  </label>
-                  <textarea
-                    value={userQuestion}
-                    onChange={(e) => setUserQuestion(e.target.value)}
-                    placeholder="Ví dụ: Công việc sắp tới của tôi có suôn sẻ không? Hay năng lượng ngày hôm nay của tôi là gì?..."
-                    className="w-full h-24 bg-bg-elevated/40 border border-gold-primary/10 focus:border-gold-light focus:outline-none rounded-xl p-4 text-xs md:text-sm font-lora text-text-primary placeholder:text-text-secondary/40 focus:shadow-[0_0_12px_var(--color-gold-glow)] transition-all resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleStartShuffle}
-                  className="w-full py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_15px_var(--color-gold-glow)] flex items-center justify-center gap-2"
+            <AnimatePresence mode="wait">
+              {/* STEP 1: INPUT QUESTION */}
+              {step === 'INPUT' && (
+                <motion.div
+                  key="step-input"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="bg-bg-surface/40 border border-gold-primary/15 rounded-2xl p-6 shadow-xl flex flex-col gap-5"
                 >
-                  <span>🃏 Bắt Đầu Xáo Bài</span>
-                </button>
-              </div>
-            )}
-
-            {/* STEP 2: SHUFFLING & PICKING CARDS TABLE */}
-            {(step === 'SHUFFLING' || step === 'PICKING') && (
-              <div className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible animate-[fadeIn_0.3s_ease-out] min-h-[380px] md:min-h-[440px]">
-                {/* Mystic circle bg */}
-                <div className="absolute w-[300px] h-[300px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_60s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                
-                {step === 'PICKING' && (
-                  <span className="text-[10px] md:text-xs font-sans text-gold-light/75 uppercase tracking-widest font-semibold text-center mt-2 animate-pulse">
-                    ✨ Nhấp chọn 1 quân bài bên dưới theo trực giác của bạn ✨
-                  </span>
-                )}
-
-                <CardDeck
-                  cardsCount={deckCount}
-                  onSelectCard={handleSelectCard}
-                  isShuffling={step === 'SHUFFLING'}
-                  isDeckSpread={step === 'PICKING'}
-                  shuffleTheme={shuffleTheme}
-                  pickingTheme={pickingTheme}
-                  weatherEffect={weatherEffect}
-                  reduceMotion={reduceMotion}
-                  onStopShuffle={() => {
-                    if ((window as any).finishSingleShuffle) {
-                      (window as any).finishSingleShuffle();
-                    }
-                  }}
-                />
-              </div>
-            )}
-
-            {/* STEP 3: RESULT REVEALED CARD & AI CALL */}
-            {(step === 'RESULT' || step === 'INTERPRETING' || step === 'COMPLETE') && revealedCard && (
-              <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]">
-                
-                {/* Display card and basic info */}
-                <div className="bg-bg-surface/30 border border-gold-primary/15 rounded-2xl p-5 md:p-6 shadow-xl flex flex-col sm:flex-row gap-6 items-center sm:items-start justify-center">
+                  <h3 className="font-cinzel text-base md:text-lg text-gold-light font-bold tracking-wide">
+                    💬 Gửi Trực Giác Của Bạn Vào Câu Hỏi
+                  </h3>
                   
-                  {/* Card view */}
-                  <div className="flex flex-col items-center gap-3">
-                    <TarotCard
-                      card={revealedCard.card}
-                      isFlipped={isFlipped}
-                      isReversed={revealedCard.isReversed}
-                      size="lg"
-                      interactive={false}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs text-text-secondary font-sans uppercase tracking-wider font-semibold">
+                      Bạn muốn hỏi vũ trụ điều gì? (Không bắt buộc)
+                    </label>
+                    <textarea
+                      value={userQuestion}
+                      onChange={(e) => setUserQuestion(e.target.value)}
+                      placeholder="Ví dụ: Công việc sắp tới của tôi có suôn sẻ không? Hay năng lượng ngày hôm nay của tôi là gì?..."
+                      className="w-full h-24 bg-bg-elevated/40 border border-gold-primary/10 focus:border-gold-light focus:outline-none rounded-xl p-4 text-xs md:text-sm font-lora text-text-primary placeholder:text-text-secondary/40 focus:shadow-[0_0_12px_var(--color-gold-glow)] transition-all resize-none"
                     />
-                    <button
-                      onClick={() => setIsInspectorOpen(true)}
-                      className="w-full py-2 text-xs font-semibold uppercase tracking-wider rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-gold-light hover:text-white cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-[0_0_8px_rgba(244,162,97,0.15)]"
-                    >
-                      🔍 Ngắm Bản Vẽ Cực Nét
-                    </button>
                   </div>
 
-                  {/* Quick meaning info */}
-                  <div className="flex-1 flex flex-col gap-4 font-lora text-center sm:text-left">
-                    <div className="flex flex-col gap-1.5 border-b border-gold-primary/10 pb-3">
-                      <span className="text-[10px] text-gold-light/60 font-sans tracking-widest uppercase font-bold">
-                        Quân Bài Định Mệnh Của Bạn:
-                      </span>
-                      <h2 className="font-cinzel text-2xl font-bold text-gold-light tracking-wide">
-                        {revealedCard.card.nameVi} ({revealedCard.card.nameEn})
-                      </h2>
-                      <span className="font-sans font-bold text-[10px] uppercase tracking-wider text-gold-dark">
-                        {revealedCard.isReversed ? '↩ Chiều Ngược (Reversed)' : '✦ Chiều Xuôi (Upright)'}
-                      </span>
-                    </div>
+                  <button
+                    onClick={handleStartShuffle}
+                    className="w-full py-3.5 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_15px_var(--color-gold-glow)] flex items-center justify-center gap-2"
+                  >
+                    <span>🃏 Bắt Đầu Xáo Bài</span>
+                  </button>
+                </motion.div>
+              )}
 
-                    <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                      {revealedCard.card.keywordsVi.map((keyword, idx) => (
-                        <span key={idx} className="px-2 py-0.5 rounded bg-gold-primary/10 border border-gold-primary/20 text-gold-light text-[10px] font-sans font-semibold uppercase tracking-wider">
-                          #{keyword}
-                        </span>
-                      ))}
-                    </div>
+              {/* STEP 2: SHUFFLING & PICKING CARDS TABLE */}
+              {(step === 'SHUFFLING' || step === 'PICKING') && (
+                <motion.div
+                  key="step-picking"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="bg-[#12122b]/50 border border-gold-primary/15 rounded-2xl p-4 shadow-2xl flex flex-col items-center relative overflow-visible min-h-[380px] md:min-h-[440px]"
+                >
+                  {/* Mystic circle bg */}
+                  <div className="absolute w-[300px] h-[300px] rounded-full border border-gold-primary/5 -z-10 animate-[spin_60s_linear_infinite] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  
+                  {step === 'PICKING' && (
+                    <span className="text-[10px] md:text-xs font-sans text-gold-light/75 uppercase tracking-widest font-semibold text-center mt-2 animate-pulse">
+                      ✨ Nhấp chọn 1 quân bài bên dưới theo trực giác của bạn ✨
+                    </span>
+                  )}
 
-                    <p className="text-text-primary text-xs md:text-sm leading-relaxed italic border-l-2 border-gold-primary/20 pl-3">
-                      {revealedCard.isReversed ? revealedCard.card.meaningReversed : revealedCard.card.meaningUpright}
-                    </p>
-
-                    {step === 'RESULT' && (
-                      <button
-                        onClick={handleGetInterpretation}
-                        disabled={aiLoading}
-                        className="w-full mt-2 py-3 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_12px_var(--color-gold-glow)] flex items-center justify-center gap-1.5"
-                      >
-                        <span>✨ Nhận Luận Giải Từ Mèo Vàng</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* AI Interpretation Box */}
-                {(step === 'INTERPRETING' || step === 'COMPLETE') && (
-                  <AIInterpretation
-                    interpretation={aiInterpretation}
-                    loading={aiLoading}
-                    error={aiError}
-                    onRetry={handleGetInterpretation}
-                    spreadInfo={`Lá bài duy nhất: ${revealedCard.card.nameVi} (${
-                      revealedCard.isReversed ? 'Ngược' : 'Xuôi'
-                    }) ${userQuestion ? `| Câu hỏi: "${userQuestion}"` : ''}`}
-                    userPrompt={userPrompt}
+                  <CardDeck
+                    cardsCount={deckCount}
+                    onSelectCard={handleSelectCard}
+                    isShuffling={step === 'SHUFFLING'}
+                    isDeckSpread={step === 'PICKING'}
+                    shuffleTheme={shuffleTheme}
+                    pickingTheme={pickingTheme}
+                    weatherEffect={weatherEffect}
+                    reduceMotion={reduceMotion}
+                    onStopShuffle={() => {
+                      if ((window as any).finishSingleShuffle) {
+                        (window as any).finishSingleShuffle();
+                      }
+                    }}
                   />
-                )}
+                </motion.div>
+              )}
 
-                {/* Final Complete Tools Menu */}
-                {step === 'COMPLETE' && (
-                  <div className="flex flex-wrap gap-3 justify-center md:justify-end font-sans">
-                    <button
-                      onClick={handleReset}
-                      className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-primary hover:text-gold-light cursor-pointer transition-all"
-                    >
-                      🔄 Rút Lá Bài Khác
-                    </button>
-                    <Link
-                      href="/"
-                      className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
-                    >
-                      🏠 Về Trang Chủ
-                    </Link>
+              {/* STEP 3: RESULT REVEALED CARD & AI CALL */}
+              {(step === 'RESULT' || step === 'INTERPRETING' || step === 'COMPLETE') && revealedCard && (
+                <motion.div
+                  key="step-result"
+                  initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -15, scale: 0.98 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex flex-col gap-6"
+                >
+                  
+                  {/* Display card and basic info */}
+                  <div className="bg-bg-surface/30 border border-gold-primary/15 rounded-2xl p-5 md:p-6 shadow-xl flex flex-col sm:flex-row gap-6 items-center sm:items-start justify-center">
+                    
+                    {/* Card view */}
+                    <div className="flex flex-col items-center gap-3">
+                      <TarotCard
+                        card={revealedCard.card}
+                        isFlipped={isFlipped}
+                        isReversed={revealedCard.isReversed}
+                        size="lg"
+                        interactive={false}
+                      />
+                      <button
+                        onClick={() => setIsInspectorOpen(true)}
+                        className="w-full py-2 text-xs font-semibold uppercase tracking-wider rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-gold-light hover:text-white cursor-pointer transition-all flex items-center justify-center gap-1.5 shadow-[0_0_8px_rgba(244,162,97,0.15)]"
+                      >
+                        🔍 Ngắm Bản Vẽ Cực Nét
+                      </button>
+                    </div>
+
+                    {/* Quick meaning info */}
+                    <div className="flex-1 flex flex-col gap-4 font-lora text-center sm:text-left">
+                      <div className="flex flex-col gap-1.5 border-b border-gold-primary/10 pb-3">
+                        <span className="text-[10px] text-gold-light/60 font-sans tracking-widest uppercase font-bold">
+                          Quân Bài Định Mệnh Của Bạn:
+                        </span>
+                        <h2 className="font-cinzel text-2xl font-bold text-gold-light tracking-wide">
+                          {revealedCard.card.nameVi} ({revealedCard.card.nameEn})
+                        </h2>
+                        <span className="font-sans font-bold text-[10px] uppercase tracking-wider text-gold-dark">
+                          {revealedCard.isReversed ? '↩ Chiều Ngược (Reversed)' : '✦ Chiều Xuôi (Upright)'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                        {revealedCard.card.keywordsVi.map((keyword, idx) => (
+                          <span key={idx} className="px-2 py-0.5 rounded bg-gold-primary/10 border border-gold-primary/20 text-gold-light text-[10px] font-sans font-semibold uppercase tracking-wider">
+                            #{keyword}
+                          </span>
+                        ))}
+                      </div>
+
+                      <p className="text-text-primary text-xs md:text-sm leading-relaxed italic border-l-2 border-gold-primary/20 pl-3">
+                        {revealedCard.isReversed ? revealedCard.card.meaningReversed : revealedCard.card.meaningUpright}
+                      </p>
+
+                      {step === 'RESULT' && (
+                        <button
+                          onClick={handleGetInterpretation}
+                          disabled={aiLoading}
+                          className="w-full mt-2 py-3 font-sans font-bold text-sm uppercase tracking-widest rounded-xl bg-gold-primary hover:bg-gold-light text-bg-deep cursor-pointer transition-all shadow-[0_0_12px_var(--color-gold-glow)] flex items-center justify-center gap-1.5"
+                        >
+                          <span>✨ Nhận Luận Giải Từ Mèo Vàng</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
 
-              </div>
-            )}
+                  {/* AI Interpretation Box */}
+                  {(step === 'INTERPRETING' || step === 'COMPLETE') && (
+                    <AIInterpretation
+                      interpretation={aiInterpretation}
+                      loading={aiLoading}
+                      error={aiError}
+                      onRetry={handleGetInterpretation}
+                      spreadInfo={`Lá bài duy nhất: ${revealedCard.card.nameVi} (${
+                        revealedCard.isReversed ? 'Ngược' : 'Xuôi'
+                      }) ${userQuestion ? `| Câu hỏi: "${userQuestion}"` : ''}`}
+                      userPrompt={userPrompt}
+                    />
+                  )}
 
+                  {/* Final Complete Tools Menu */}
+                  {step === 'COMPLETE' && (
+                    <div className="flex flex-wrap gap-3 justify-center md:justify-end font-sans">
+                      <button
+                        onClick={handleReset}
+                        className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-primary hover:text-gold-light cursor-pointer transition-all"
+                      >
+                        🔄 Rút Lá Bài Khác
+                      </button>
+                      <Link
+                        href="/"
+                        className="px-5 py-2.5 text-xs md:text-sm font-bold rounded-xl bg-bg-surface hover:bg-bg-elevated border border-gold-primary/20 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
+                      >
+                        🏠 Về Trang Chủ
+                      </Link>
+                    </div>
+                  )}
+
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
         </div>

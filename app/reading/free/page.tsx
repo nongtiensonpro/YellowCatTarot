@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SOUL_MARKS } from '@/lib/soul-marks';
 import { TierRound, createInitialRound } from '@/lib/multi-tier-deck';
 import { useApiKey } from '@/components/ApiKeyProvider';
+import { calculateRoundCardLayout, calculateRoundLaneTop, SPREAD_PRESETS, SpreadLayoutType } from '@/lib/tarot-layouts';
 
 type FlowStep = 'SETUP' | 'SHUFFLING' | 'PICKING' | 'RESULT';
 
@@ -48,15 +49,27 @@ interface SavedFreeSession {
 
 const FREE_SESSION_STORAGE_KEY = 'tarot_free_unlimited_session';
 
-function getInitialCardPlacement(round: number, pickOrder: number, zIndex: number) {
-  const rowY = 82 + (round - 1) * 320;
-  const column = (pickOrder - 1) % 10;
-  const rowOffset = Math.floor((pickOrder - 1) / 10);
+function getInitialCardPlacement(
+  round: number,
+  pickOrder: number,
+  zIndex: number,
+  presetsMap?: Record<number, SpreadLayoutType>
+) {
+  const MARGIN_LEFT = 40;
+  const MARGIN_TOP = 20;
+  const MIN_GAP_X = 145;
+  const MIN_GAP_Y = 235;
+  const cardsPerRow = 8;
+
+  const laneTop = calculateRoundLaneTop(round, presetsMap);
+  const indexInRound = pickOrder - 1;
+  const row = Math.floor(indexInRound / cardsPerRow);
+  const col = indexInRound % cardsPerRow;
 
   return {
-    x: 120 + column * 155 + rowOffset * 24,
-    y: rowY + rowOffset * 68,
-    rotation: ((pickOrder % 5) - 2) * 4,
+    x: MARGIN_LEFT + col * MIN_GAP_X,
+    y: laneTop + MARGIN_TOP + row * MIN_GAP_Y,
+    rotation: 0,
     zIndex,
   };
 }
@@ -65,12 +78,13 @@ function findNonOverlappingPlacement(
   round: number,
   pickOrder: number,
   zIndex: number,
-  existingCards: FreeWorkspaceCard[]
+  existingCards: FreeWorkspaceCard[],
+  presetsMap?: Record<number, SpreadLayoutType>
 ) {
-  const placement = getInitialCardPlacement(round, pickOrder, zIndex);
+  const placement = getInitialCardPlacement(round, pickOrder, zIndex, presetsMap);
   
-  const thresholdX = 140; // horizontal separation
-  const thresholdY = 245; // vertical separation
+  const thresholdX = 130; // horizontal: cards don't overlap if gap >= card width (120)
+  const thresholdY = 220; // vertical: cards don't overlap if gap >= card height (208)
   
   let attempts = 0;
   const maxAttempts = 100;
@@ -78,11 +92,13 @@ function findNonOverlappingPlacement(
   while (attempts < maxAttempts) {
     let hasOverlap = false;
     for (const card of existingCards) {
-      const dx = Math.abs(card.x - placement.x);
-      const dy = Math.abs(card.y - placement.y);
-      if (dx < thresholdX && dy < thresholdY) {
-        hasOverlap = true;
-        break;
+      if (card.round === round) {
+        const dx = Math.abs(card.x - placement.x);
+        const dy = Math.abs(card.y - placement.y);
+        if (dx < thresholdX && dy < thresholdY) {
+          hasOverlap = true;
+          break;
+        }
       }
     }
     
@@ -91,12 +107,12 @@ function findNonOverlappingPlacement(
     }
     
     // Shift position: try shifting horizontally to the right
-    placement.x += 155;
+    placement.x += 145;
     
-    // If it goes beyond the BOARD_WIDTH boundary, wrap it back and shift down
-    if (placement.x > 1800 - 150) {
-      placement.x = 120;
-      placement.y += 100; // shift down
+    // If it goes beyond the BOARD_WIDTH boundary, wrap back and shift down
+    if (placement.x > 2950 - 180) {
+      placement.x = 40;
+      placement.y += 235;
     }
     
     attempts++;
@@ -126,6 +142,7 @@ export default function FreeReadingPage() {
   const [showJournal, setShowJournal] = useState<boolean>(false);
   const [showCardControlPanel, setShowCardControlPanel] = useState<boolean>(false);
   const [showRoundSettings, setShowRoundSettings] = useState<boolean>(false);
+  const [showInlineDeckRibbon, setShowInlineDeckRibbon] = useState<boolean>(false);
 
   // Dynamic Ghibli roundsData storage
   const [roundsData, setRoundsData] = useState<TierRound[]>([
@@ -185,6 +202,16 @@ export default function FreeReadingPage() {
     const map: Record<number, string> = {};
     roundsData.forEach((r) => {
       map[r.roundNumber] = r.roundName;
+    });
+    return map;
+  }, [roundsData]);
+
+  const activeLayoutPresetsMap = useMemo(() => {
+    const map: Record<number, SpreadLayoutType> = {};
+    roundsData.forEach((r) => {
+      if (r.activeLayoutPreset) {
+        map[r.roundNumber] = r.activeLayoutPreset as SpreadLayoutType;
+      }
     });
     return map;
   }, [roundsData]);
@@ -348,7 +375,8 @@ export default function FreeReadingPage() {
         const faceDowns = prepareFaceDownCards(deckState, remainingCards);
         setFaceDownPositions(faceDowns);
         setStep('PICKING');
-      }, reduceMotion ? 100 : 600);
+        setShowInlineDeckRibbon(true);
+      }, reduceMotion ? 100 : 400);
       return;
     }
 
@@ -372,21 +400,119 @@ export default function FreeReadingPage() {
       setDeckState(newDeck);
       setFaceDownPositions(faceDowns);
       setStep('PICKING');
+      setShowInlineDeckRibbon(true);
     };
 
     if (shuffleTheme !== 'soot-sprite') {
-      setTimeout(finishShuffle, reduceMotion ? 100 : 1500);
+      setTimeout(finishShuffle, reduceMotion ? 100 : 1000);
     } else {
       (window as any).finishFreeShuffle = finishShuffle;
     }
   };
 
-  // SELECT CARD FOR ACTIVE ROUND
-  const handleSelectCard = (displayIdx: number) => {
-    if (step !== 'PICKING' || !deckState) return;
+  // 1-CLICK QUICK DRAW SINGLE CARD
+  const handleQuickDrawSingleCard = async (targetRoundNum?: number) => {
+    const roundToDraw = targetRoundNum !== undefined ? targetRoundNum : currentRound;
+    const activeRoundData = roundsData.find(r => r.roundNumber === roundToDraw);
+    if (!activeRoundData) return;
+
+    let activeDeck = deckState;
+    if (!activeDeck || activeRoundData.deckMode === 'fresh') {
+      const entropy = { events: [], timings: [] };
+      const shuffledOrder = await hyperShuffle(entropy.events, entropy.timings, deckProvider.info.totalCards);
+      activeDeck = createNewDeck(shuffledOrder);
+      setDeckState(activeDeck);
+    }
+
+    const availableIndices: number[] = [];
+    for (let i = 0; i < deckProvider.info.totalCards; i++) {
+      if (!activeDeck.drawnCardIds.has(i)) {
+        availableIndices.push(i);
+      }
+    }
+
+    if (availableIndices.length === 0) {
+      alert('Đã hết bài trong bộ bài này! Vui lòng chọn Trộn Mới hoặc chọn bộ bài khác.');
+      return;
+    }
+
+    const randomCardIdx = availableIndices[Math.floor(Math.random() * availableIndices.length)];
+    const isReversed = Math.random() < 0.33;
+
+    activeDeck.drawnCardIds.add(randomCardIdx);
+
+    const cardType = deckProvider.getById(randomCardIdx);
+    if (!cardType) return;
+
+    const currentRoundCards = activeRoundData.cards;
+    const newPickCount = currentRoundCards.length + 1;
+
+    let placement: { x: number; y: number; rotation: number; label: string };
+    if (activeRoundData.activeLayoutPreset && activeRoundData.activeLayoutPreset !== 'auto') {
+      const presetId = activeRoundData.activeLayoutPreset as SpreadLayoutType;
+      const presetInfo = SPREAD_PRESETS.find(p => p.id === presetId);
+      const targetCount = presetInfo?.recommendedCards || newPickCount;
+      const layoutResults = calculateRoundCardLayout(targetCount, roundToDraw, presetId, activeLayoutPresetsMap);
+      placement = layoutResults[currentRoundCards.length] || {
+        ...findNonOverlappingPlacement(roundToDraw, newPickCount, allDrawnCards.length + 1, allDrawnCards, activeLayoutPresetsMap),
+        label: `${activeRoundData.roundName} · Lá ${newPickCount}`,
+      };
+    } else {
+      placement = {
+        ...findNonOverlappingPlacement(roundToDraw, newPickCount, allDrawnCards.length + 1, allDrawnCards, activeLayoutPresetsMap),
+        label: `${activeRoundData.roundName} · Lá ${newPickCount}`,
+      };
+    }
+
+    const drawnCard: FreeDrawnCard = {
+      id: `free-${roundToDraw}-${randomCardIdx}-${newPickCount}-${++idCounterRef.current}`,
+      card: cardType,
+      isReversed,
+      pickOrder: newPickCount,
+      round: roundToDraw,
+      label: placement.label,
+      note: '',
+      locked: false,
+      deckId: selectedDeckId,
+      x: placement.x,
+      y: placement.y,
+      rotation: placement.rotation,
+      zIndex: allDrawnCards.length + 1,
+    };
+
+    setActiveCardId(drawnCard.id);
+
+    setRoundsData((prev) =>
+      prev.map((round) =>
+        round.roundNumber === roundToDraw
+          ? { ...round, cards: [...round.cards, drawnCard] }
+          : round
+      )
+    );
+
+    setCurrentPickCount(newPickCount);
+
+    const total = deckProvider.info.totalCards;
+    const remainingCount = activeRoundData.deckMode === 'continue'
+      ? total - activeDeck.drawnCardIds.size
+      : total - newPickCount;
+    const faceDowns = prepareFaceDownCards(activeDeck, remainingCount);
+    setFaceDownPositions(faceDowns);
+  };
+
+  // SELECT CARD FOR ACTIVE ROUND (SEAMLESS INLINE & RIBBON PICK)
+  const handleSelectCard = async (displayIdx: number) => {
+    let activeDeck = deckState;
+    if (!activeDeck) {
+      const entropy = { events: [], timings: [] };
+      const shuffledOrder = await hyperShuffle(entropy.events, entropy.timings, deckProvider.info.totalCards);
+      activeDeck = createNewDeck(shuffledOrder);
+      setDeckState(activeDeck);
+      setFaceDownPositions(prepareFaceDownCards(activeDeck, deckProvider.info.totalCards));
+    }
 
     try {
-      const drawn = userPicksFromFaceDown(deckState, faceDownPositions, displayIdx);
+      const drawn = userPicksFromFaceDown(activeDeck, faceDownPositions, displayIdx);
       const cardType = deckProvider.getById(drawn.cardId);
 
       if (!cardType) return;
@@ -396,7 +522,23 @@ export default function FreeReadingPage() {
 
       const currentRoundCards = activeRoundData.cards;
       const newPickCount = currentRoundCards.length + 1;
-      const placement = findNonOverlappingPlacement(currentRound, newPickCount, allDrawnCards.length + 1, allDrawnCards);
+
+      let placement: { x: number; y: number; rotation: number; label: string };
+      if (activeRoundData.activeLayoutPreset && activeRoundData.activeLayoutPreset !== 'auto') {
+        const presetId = activeRoundData.activeLayoutPreset as SpreadLayoutType;
+        const presetInfo = SPREAD_PRESETS.find(p => p.id === presetId);
+        const targetCount = presetInfo?.recommendedCards || newPickCount;
+        const layoutResults = calculateRoundCardLayout(targetCount, currentRound, presetId, activeLayoutPresetsMap);
+        placement = layoutResults[currentRoundCards.length] || {
+          ...findNonOverlappingPlacement(currentRound, newPickCount, allDrawnCards.length + 1, allDrawnCards, activeLayoutPresetsMap),
+          label: `${activeRoundData.roundName} · Lá ${newPickCount}`,
+        };
+      } else {
+        placement = {
+          ...findNonOverlappingPlacement(currentRound, newPickCount, allDrawnCards.length + 1, allDrawnCards, activeLayoutPresetsMap),
+          label: `${activeRoundData.roundName} · Lá ${newPickCount}`,
+        };
+      }
 
       const drawnCard: FreeDrawnCard = {
         id: `free-${currentRound}-${drawn.cardId}-${newPickCount}-${++idCounterRef.current}`,
@@ -404,11 +546,14 @@ export default function FreeReadingPage() {
         isReversed: drawn.isReversed,
         pickOrder: newPickCount,
         round: currentRound,
-        label: `${activeRoundData.roundName} · Lá ${newPickCount}`,
+        label: placement.label,
         note: '',
         locked: false,
         deckId: selectedDeckId,
-        ...placement,
+        x: placement.x,
+        y: placement.y,
+        rotation: placement.rotation,
+        zIndex: allDrawnCards.length + 1,
       };
       setActiveCardId(drawnCard.id);
 
@@ -427,16 +572,12 @@ export default function FreeReadingPage() {
 
       setCurrentPickCount(newPickCount);
 
-      if (newPickCount >= cardsToPickThisRound) {
-        setStep('SETUP');
-      } else {
-        const total = deckProvider.info.totalCards;
-        const remainingCount = activeRoundData.deckMode === 'continue'
-          ? total - deckState.drawnCardIds.size
-          : total - newPickCount;
-        const faceDowns = prepareFaceDownCards(deckState, remainingCount);
-        setFaceDownPositions(faceDowns);
-      }
+      const total = deckProvider.info.totalCards;
+      const remainingCount = activeRoundData.deckMode === 'continue'
+        ? total - activeDeck.drawnCardIds.size
+        : total - newPickCount;
+      const faceDowns = prepareFaceDownCards(activeDeck, remainingCount);
+      setFaceDownPositions(faceDowns);
     } catch (err) {
       console.error(err);
     }
@@ -459,16 +600,40 @@ export default function FreeReadingPage() {
     );
   };
 
-  const handleAutoArrangeWorkspace = () => {
+  const handleAutoArrangeWorkspace = (presetId: SpreadLayoutType = 'auto', targetRoundNum?: number) => {
     setRoundsData((prev) =>
-      prev.map((round) => ({
-        ...round,
-        cards: round.cards.map((c, index) => ({
-          ...c,
-          ...getInitialCardPlacement(c.round, index + 1, index + 1),
-          pickOrder: index + 1,
-        })),
-      }))
+      prev.map((round) => {
+        if (targetRoundNum !== undefined && round.roundNumber !== targetRoundNum) {
+          return round;
+        }
+
+        const effectivePreset = presetId === 'auto' ? (round.activeLayoutPreset as SpreadLayoutType || 'auto') : presetId;
+        const effectivePresetInfo = SPREAD_PRESETS.find(p => p.id === effectivePreset) || SPREAD_PRESETS[0];
+        const targetCount = effectivePresetInfo.recommendedCards > 0 ? effectivePresetInfo.recommendedCards : Math.max(1, round.cards.length);
+        const layoutResults = calculateRoundCardLayout(targetCount, round.roundNumber, effectivePreset, activeLayoutPresetsMap);
+
+        return {
+          ...round,
+          activeLayoutPreset: effectivePreset,
+          maxCards: effectivePresetInfo.recommendedCards > 0 ? effectivePresetInfo.recommendedCards : round.maxCards,
+          cards: round.cards.map((c, index) => {
+            const placement = layoutResults[index] || {
+              x: 40 + index * 145,
+              y: calculateRoundLaneTop(round.roundNumber, activeLayoutPresetsMap) + 20,
+              rotation: 0,
+              label: `${round.roundName} · Lá ${index + 1}`,
+            };
+            return {
+              ...c,
+              x: placement.x,
+              y: placement.y,
+              rotation: placement.rotation,
+              label: placement.label,
+              pickOrder: index + 1,
+            };
+          }),
+        };
+      })
     );
   };
 
@@ -544,20 +709,25 @@ export default function FreeReadingPage() {
 
   const handleResetAll = () => {
     if (confirm('Quý nhân có chắc chắn muốn dọn sạch bàn trải bài và bắt đầu phiên tự do mới từ Vòng 1 không?')) {
-      setCurrentRound(1);
-      setStep('SETUP');
-      setRoundsData([
-        createInitialRound(1, 0),
-        createInitialRound(2, 1),
-        createInitialRound(3, 2),
-      ]);
-      setCardsToPickThisRound(3);
       setActiveCardId(null);
-      setConversation([]);
-      setConversationInput('');
-      setJournalNotes('');
-      sessionStorage.removeItem('tarot_free_journal');
-      sessionStorage.removeItem(FREE_SESSION_STORAGE_KEY);
+      setShowInlineDeckRibbon(false);
+      
+      // Short delay so exit animation plays out smoothly before wiping state
+      setTimeout(() => {
+        setCurrentRound(1);
+        setStep('SETUP');
+        setRoundsData([
+          createInitialRound(1, 0),
+          createInitialRound(2, 1),
+          createInitialRound(3, 2),
+        ]);
+        setCardsToPickThisRound(3);
+        setConversation([]);
+        setConversationInput('');
+        setJournalNotes('');
+        sessionStorage.removeItem('tarot_free_journal');
+        sessionStorage.removeItem(FREE_SESSION_STORAGE_KEY);
+      }, 250);
     }
   };
 
@@ -592,6 +762,43 @@ export default function FreeReadingPage() {
           onToggleJournal={() => setShowJournal(!showJournal)}
           onToggleCardControlPanel={() => setShowCardControlPanel(!showCardControlPanel)}
           hasCards={allDrawnCards.length > 0}
+          onQuickDrawSingle={() => handleQuickDrawSingleCard()}
+          showInlineDeckRibbon={showInlineDeckRibbon}
+          onToggleInlineDeckRibbon={() => setShowInlineDeckRibbon(!showInlineDeckRibbon)}
+          currentRoundNumber={currentRound}
+          onSelectRoundNumber={(rNum) => {
+            setCurrentRound(rNum);
+            const r = roundsData.find(x => x.roundNumber === rNum);
+            if (r) setCardsToPickThisRound(r.maxCards);
+          }}
+          onCreateRound={handleCreateNewRound}
+          selectedDeckId={selectedDeckId}
+          onDeckChange={handleDeckChange}
+          onApplyLayoutPreset={handleAutoArrangeWorkspace}
+          activeLayoutPresets={activeLayoutPresetsMap}
+          onQuickDrawSingleSlot={(rNum) => handleQuickDrawSingleCard(rNum)}
+          inlineDeckComponent={
+            <CardDeck
+              cardsCount={
+                roundsData.find(r => r.roundNumber === currentRound)?.deckMode === 'continue' && deckState
+                  ? deckProvider.info.totalCards - deckState.drawnCardIds.size
+                  : deckProvider.info.totalCards - (roundsData.find(r => r.roundNumber === currentRound)?.cards.length || 0)
+              }
+              onSelectCard={handleSelectCard}
+              isShuffling={step === 'SHUFFLING'}
+              isDeckSpread={true}
+              shuffleTheme={shuffleTheme}
+              pickingTheme={pickingTheme}
+              weatherEffect={weatherEffect}
+              reduceMotion={reduceMotion}
+              onStopShuffle={() => {
+                if ((window as any).finishFreeShuffle) {
+                  (window as any).finishFreeShuffle();
+                }
+              }}
+              deckCardBack={deckProvider.info.cardBackPath}
+            />
+          }
         />
 
         {/* ROUND CONFIGURATION SIDEBAR POPUP (SLIDE-OUT FROM RIGHT) */}
@@ -919,62 +1126,6 @@ export default function FreeReadingPage() {
                     </div>
                   );
                 })()}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* CARD DECK DRAWING OVERLAY */}
-        <AnimatePresence>
-          {(step === 'SHUFFLING' || step === 'PICKING') && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className="absolute inset-0 bg-[#070711]/92 backdrop-blur-md z-40 flex flex-col items-center justify-center p-4 border border-gold-primary/20"
-            >
-              {/* Close button at top right */}
-              <button
-                type="button"
-                onClick={() => setStep('SETUP')}
-                className="absolute top-4 right-4 z-50 px-3 py-1.5 text-text-secondary hover:text-gold-light transition-colors rounded-xl bg-white/5 border border-white/10 hover:border-gold-primary/30 cursor-pointer text-[10px] font-sans uppercase font-bold tracking-wider"
-              >
-                ❌ Đóng Cửa Sổ
-              </button>
-
-              {/* Inside is the CardDeck */}
-              <div className="relative w-full max-w-4xl flex flex-col items-center justify-center gap-2 overflow-visible">
-                {step === 'PICKING' && roundsData.find(r => r.roundNumber === currentRound) && (
-                  <div className="text-center mt-2 flex flex-col gap-0.5 z-10 select-none">
-                    <span className="text-[9px] font-sans text-text-secondary uppercase tracking-widest leading-none font-bold">
-                      Đang nhặt {roundsData.find(r => r.roundNumber === currentRound)?.roundName}:
-                    </span>
-                    <span className="text-xs font-cinzel text-gold-light font-bold uppercase tracking-wider animate-pulse">
-                      Nhặt quân số {(roundsData.find(r => r.roundNumber === currentRound)?.cards.length || 0) + 1} / {cardsToPickThisRound}
-                    </span>
-                  </div>
-                )}
-
-                <CardDeck
-                  cardsCount={
-                    roundsData.find(r => r.roundNumber === currentRound)?.deckMode === 'continue' && deckState
-                      ? deckProvider.info.totalCards - deckState.drawnCardIds.size
-                      : deckProvider.info.totalCards - (roundsData.find(r => r.roundNumber === currentRound)?.cards.length || 0)
-                  }
-                  onSelectCard={handleSelectCard}
-                  isShuffling={step === 'SHUFFLING'}
-                  isDeckSpread={step === 'PICKING'}
-                  shuffleTheme={shuffleTheme}
-                  pickingTheme={pickingTheme}
-                  weatherEffect={weatherEffect}
-                  reduceMotion={reduceMotion}
-                  onStopShuffle={() => {
-                    if ((window as any).finishFreeShuffle) {
-                      (window as any).finishFreeShuffle();
-                    }
-                  }}
-                  deckCardBack={deckProvider.info.cardBackPath}
-                />
               </div>
             </motion.div>
           )}

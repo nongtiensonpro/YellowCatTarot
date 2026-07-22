@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApiKey } from './ApiKeyProvider';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Image from 'next/image';
@@ -86,7 +87,7 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
     }
   }, [isOpen, apiKey, preferredModel, preferredCardBack, shuffleTheme, pickingTheme, enableSound, reduceMotion]);
 
-  if (!isOpen) return null;
+  // Removed top-level null return to allow AnimatePresence exit animation
 
   const handleTestKey = async () => {
     if (!inputKey) {
@@ -133,14 +134,26 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        className="relative w-full max-w-lg bg-bg-surface border border-gold-primary/30 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto"
-      >
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none"
+        >
+          <motion.form
+            initial={{ scale: 0.92, opacity: 0, y: 15 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.92, opacity: 0, y: 15 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+            className="relative w-full max-w-lg bg-bg-surface border border-gold-primary/30 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 max-h-[92vh] overflow-y-auto"
+          >
         
         {/* Header */}
         <div className="flex justify-between items-center border-b border-gold-primary/10 pb-3">
@@ -443,7 +456,9 @@ export default function ApiKeyModal({ isOpen, onClose }: ApiKeyModalProps) {
             Lưu Cài Đặt
           </button>
         </div>
-      </form>
-    </div>
+      </motion.form>
+    </motion.div>
+  )}
+</AnimatePresence>
   );
 }
