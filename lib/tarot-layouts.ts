@@ -63,10 +63,10 @@ export function getSpreadPresetInfo(presetId: SpreadLayoutType): SpreadPresetInf
 
 const CARD_W = 120;
 const CARD_H = 208;
-const MIN_GAP_X = 145;  // horizontal spacing between card left edges
-const MIN_GAP_Y = 235;  // vertical spacing between card top edges
+const MIN_GAP_X = 175;  // horizontal spacing between card left edges (55px edge-to-edge gap)
+const MIN_GAP_Y = 265;  // vertical spacing between card top edges (57px edge-to-edge gap)
 const MARGIN_LEFT = 40;  // left padding from board edge
-const MARGIN_TOP = 20;   // top padding within lane
+const MARGIN_TOP = 25;   // top padding within lane
 export function getPresetLaneHeight(presetId: SpreadLayoutType): number {
   switch (presetId) {
     case 'full-deck':
@@ -197,21 +197,22 @@ export function calculateRoundCardLayout(
         '7. Tương Lai Kết Nối',
       ];
       // Left column (You), Center column (Shared), Right column (Partner)
-      // Vertical spacing: MIN_GAP_Y between rows
+      // 3 Rows with full MIN_GAP_Y vertical spacing to prevent overlap
       const colLeft = MARGIN_LEFT;
-      const colCenter = MARGIN_LEFT + MIN_GAP_X * 2;
-      const colRight = MARGIN_LEFT + MIN_GAP_X * 4;
+      const colCenter = MARGIN_LEFT + MIN_GAP_X;
+      const colRight = MARGIN_LEFT + MIN_GAP_X * 2;
       const row1Y = laneTop + MARGIN_TOP;
       const row2Y = row1Y + MIN_GAP_Y;
+      const row3Y = row1Y + MIN_GAP_Y * 2;
 
       const positions = [
         { x: colLeft, y: row1Y },      // 1. Your Thoughts
-        { x: colLeft, y: row2Y },      // 2. Your Feelings
+        { x: colLeft, y: row3Y },      // 2. Your Feelings
         { x: colRight, y: row1Y },     // 3. Partner Thoughts
-        { x: colRight, y: row2Y },     // 4. Partner Feelings
+        { x: colRight, y: row3Y },     // 4. Partner Feelings
         { x: colCenter, y: row1Y },    // 5. Shared Energy
-        { x: colCenter, y: row1Y + Math.round(MIN_GAP_Y * 0.5) }, // 6. Challenge
-        { x: colCenter, y: row2Y },    // 7. Future Connection
+        { x: colCenter, y: row2Y },    // 6. Challenge
+        { x: colCenter, y: row3Y },    // 7. Future Connection
       ];
       for (let i = 0; i < cardsCount; i++) {
         const pos = positions[i] || { x: MARGIN_LEFT + i * MIN_GAP_X, y: row1Y };

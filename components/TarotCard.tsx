@@ -15,6 +15,8 @@ interface TarotCardProps {
   interactive?: boolean;
   className?: string;
   deckCardBack?: string;
+  imageQuality?: number;
+  imageSizes?: string;
 }
 
 const sizeClasses = {
@@ -24,7 +26,7 @@ const sizeClasses = {
   xl: 'w-[210px] h-[364px] sm:w-[280px] sm:h-[485px] rounded-2xl',
 };
 
-export default function TarotCard({
+function TarotCard({
   card,
   isFlipped = false,
   isReversed = false,
@@ -33,6 +35,8 @@ export default function TarotCard({
   interactive = true,
   className = '',
   deckCardBack,
+  imageQuality = 95,
+  imageSizes = "(max-width: 640px) 240px, (max-width: 1024px) 320px, 440px",
 }: TarotCardProps) {
   const sizeClass = sizeClasses[size];
 
@@ -88,8 +92,8 @@ export default function TarotCard({
                 src={card.imagePath}
                 alt={`${card.nameVi} (${card.nameEn}) ${isReversed ? '- Chiều Ngược' : '- Chiều Xuôi'}`}
                 fill
-                quality={95}
-                sizes="(max-width: 640px) 240px, (max-width: 1024px) 320px, 440px"
+                quality={imageQuality}
+                sizes={imageSizes}
                 className="object-fill"
                 priority={size === 'lg' || size === 'xl'}
               />
@@ -110,3 +114,5 @@ export default function TarotCard({
     </div>
   );
 }
+
+export default React.memo(TarotCard);

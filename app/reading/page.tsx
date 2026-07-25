@@ -167,6 +167,35 @@ export default function ReadingHub() {
               </div>
             </Link>
 
+            {/* Option 6: Tarot Reader Studio Mode (Ghibli First Person POV) */}
+            <Link
+              href="/reading/reader-studio"
+              className="group bg-gradient-to-r from-[#24170e]/80 via-[#281b12]/90 to-[#1c120a]/80 border-2 border-[#d4af37]/40 hover:border-[#d4af37] rounded-2xl p-5 shadow-2xl flex gap-5 items-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_25px_rgba(212,175,55,0.3)] cursor-pointer relative overflow-hidden"
+            >
+              {/* Warm candle shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#f4a261]/10 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none" />
+              
+              <div className="w-12 h-16 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/60 flex items-center justify-center text-[#e6c594] text-2xl font-bold font-sans group-hover:bg-[#d4af37]/35 transition-all shadow-inner">
+                🌿
+              </div>
+              <div className="flex-1 flex flex-col gap-1 text-left font-lora">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-cinzel font-bold text-base md:text-lg text-[#e6c594] group-hover:text-white transition-colors">
+                    Bàn Đọc Bài Ghibli (Reader Studio)
+                  </h3>
+                  <span className="px-2 py-0.5 text-[8px] font-sans font-bold tracking-widest rounded bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#e6c594] uppercase select-none">
+                    MỚI · READER POV 🔮
+                  </span>
+                </div>
+                <p className="text-xs md:text-sm text-[#c4aa8a] leading-relaxed">
+                  Hóa thân thành Người Đọc Bài với góc nhìn thứ nhất — Bàn gỗ sồi cổ điển, ánh nến lung linh, xòe bài hình quạt mượt mà, âm thanh sinh động và Sổ Ghi Chép Grimoire.
+                </p>
+              </div>
+              <div className="text-[#e6c594] group-hover:translate-x-1.5 transition-transform duration-200">
+                ➔
+              </div>
+            </Link>
+
           </div>
 
         </div>

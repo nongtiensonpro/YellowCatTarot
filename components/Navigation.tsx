@@ -13,6 +13,11 @@ export default function Navigation() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Hide top navigation header bar in Reader Studio mode for maximum workspace height
+  if (pathname === '/reading/reader-studio') {
+    return null;
+  }
+
   const navLinks = [
     { href: '/', label: 'Trang Chủ' },
     { href: '/cards', label: 'Tra Cứu 78 Lá' },

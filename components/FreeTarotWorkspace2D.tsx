@@ -59,8 +59,9 @@ interface FreeTarotWorkspace2DProps {
   onQuickDrawSingleSlot?: (roundNum: number, slotIndex: number) => void;
 }
 
-const BOARD_WIDTH = 2950;
-const BOARD_HEIGHT = 2800;
+const MIN_BOARD_WIDTH = 1200;
+const MIN_BOARD_HEIGHT = 900;
+const BOARD_PADDING = 200; // padding around bounding box of cards
 const CARD_WIDTH = 120;
 const CARD_HEIGHT = 208;
 const MOBILE_CARD_WIDTH = 100;
@@ -126,12 +127,52 @@ export default function FreeTarotWorkspace2D({
     return Math.max(3, ...roundNumbers, ...cards.map(c => c.round));
   }, [roundNumbers, cards]);
 
-  const boardHeight = useMemo(() => {
+  // Compute actual bounding box of all placed cards
+  const cardsBounds = useMemo(() => {
+    if (cards.length === 0) {
+      return { minX: 0, minY: 0, maxX: MIN_BOARD_WIDTH, maxY: MIN_BOARD_HEIGHT };
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const c of cards) {
+      minX = Math.min(minX, c.x);
+      minY = Math.min(minY, c.y);
+      maxX = Math.max(maxX, c.x + CARD_WIDTH);
+      maxY = Math.max(maxY, c.y + CARD_HEIGHT);
+    }
+    return { minX, minY, maxX, maxY };
+  }, [cards]);
+
+  // Dynamic board dimensions based on card bounding box + layout lane requirements
+  const { boardWidth, boardHeight } = useMemo(() => {
     const maxR = Math.max(1, ...roundNumbers, ...cards.map(c => c.round));
     const lastLaneTop = calculateRoundLaneTop(maxR, activeLayoutPresets);
     const lastLaneHeight = getPresetLaneHeight(activeLayoutPresets?.[maxR] || 'auto');
-    return Math.max(2800, lastLaneTop + lastLaneHeight + 400);
-  }, [roundNumbers, cards, activeLayoutPresets]);
+    const layoutH = lastLaneTop + lastLaneHeight + BOARD_PADDING;
+
+    const boundsW = cardsBounds.maxX + BOARD_PADDING;
+    const boundsH = cardsBounds.maxY + BOARD_PADDING;
+
+    return {
+      boardWidth: Math.max(MIN_BOARD_WIDTH, boundsW, 2950),
+      boardHeight: Math.max(MIN_BOARD_HEIGHT, boundsH, layoutH),
+    };
+  }, [roundNumbers, cards, activeLayoutPresets, cardsBounds]);
+
+  // Viewport size detection
+  const [viewportSize, setViewportSize] = useState({ w: 1200, h: 800 });
+  useEffect(() => {
+    const updateSize = () => {
+      if (scrollRef.current) {
+        setViewportSize({
+          w: scrollRef.current.clientWidth,
+          h: scrollRef.current.clientHeight,
+        });
+      }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
   const [showCardLabels, setShowCardLabels] = useState(false);
   const [showLaneLabels, setShowLaneLabels] = useState(false);
@@ -206,7 +247,7 @@ export default function FreeTarotWorkspace2D({
 
         const zoomFactor = 1 - e.deltaY * 0.0015;
         let newZoom = zoom * zoomFactor;
-        newZoom = clamp(newZoom, 0.55, 3.0);
+        newZoom = clamp(newZoom, 0.25, 3.0);
 
         const targetLeft = xBoard * newZoom - xClient;
         const targetTop = yBoard * newZoom - yClient;
@@ -263,7 +304,7 @@ export default function FreeTarotWorkspace2D({
 
         const scale = distance / initialPinchDistance;
         let newZoom = initialZoom * scale;
-        newZoom = clamp(newZoom, 0.55, 3.0);
+        newZoom = clamp(newZoom, 0.25, 3.0);
 
         const targetLeft = pinchCenter.xBoard * newZoom - pinchCenter.xClient;
         const targetTop = pinchCenter.yBoard * newZoom - pinchCenter.yClient;
@@ -313,15 +354,42 @@ export default function FreeTarotWorkspace2D({
   );
 
   const boardScaleStyle = {
-    width: `${BOARD_WIDTH}px`,
+    width: `${boardWidth}px`,
     height: `${boardHeight}px`,
     transform: `scale(${zoom})`,
     transformOrigin: 'top left',
   };
 
   const scrollContentStyle = {
-    width: `${BOARD_WIDTH * zoom}px`,
+    width: `${boardWidth * zoom}px`,
     height: `${boardHeight * zoom}px`,
+  };
+
+  // Fit-to-View: auto-calculate optimal zoom and center scroll
+  const fitToView = () => {
+    if (cards.length === 0 || !scrollRef.current) return;
+    const vw = scrollRef.current.clientWidth;
+    const vh = scrollRef.current.clientHeight;
+
+    const contentW = cardsBounds.maxX - cardsBounds.minX + CARD_WIDTH + BOARD_PADDING;
+    const contentH = cardsBounds.maxY - cardsBounds.minY + CARD_HEIGHT + BOARD_PADDING;
+
+    const fitZoom = clamp(
+      Math.min(vw / contentW, vh / contentH) * 0.92,
+      0.25, 2.5
+    );
+
+    const centerX = (cardsBounds.minX + cardsBounds.maxX) / 2;
+    const centerY = (cardsBounds.minY + cardsBounds.maxY) / 2;
+
+    const targetLeft = centerX * fitZoom - vw / 2;
+    const targetTop = centerY * fitZoom - vh / 2;
+
+    scrollTargetRef.current = {
+      left: Math.max(0, targetLeft),
+      top: Math.max(0, targetTop),
+    };
+    setZoom(fitZoom);
   };
 
   const beginCardDrag = (event: React.PointerEvent<HTMLDivElement>, card: FreeWorkspaceCard) => {
@@ -362,7 +430,7 @@ export default function FreeTarotWorkspace2D({
     const cardHeight = window.innerWidth < 640 ? MOBILE_CARD_HEIGHT : CARD_HEIGHT;
 
     onUpdateCard(drag.cardId, {
-      x: clamp(drag.startX + dx, 12, BOARD_WIDTH - cardWidth - 12),
+      x: clamp(drag.startX + dx, 12, boardWidth - cardWidth - 12),
       y: clamp(drag.startY + dy, 12, boardHeight - cardHeight - 48),
     });
   };
@@ -855,7 +923,17 @@ export default function FreeTarotWorkspace2D({
             </label>
           </div>
 
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={fitToView}
+              disabled={cards.length === 0}
+              className="px-2.5 py-1.5 rounded-lg bg-gold-primary/15 border border-gold-primary/40 hover:border-gold-light text-gold-light text-[9px] font-sans font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 disabled:opacity-35 disabled:pointer-events-none flex items-center gap-1 shadow-sm whitespace-nowrap"
+              title="Tự động thu phóng & cuộn để tất cả lá bài vừa khung hình (Fit to View)"
+            >
+              <span>📐</span>
+              {showButtonLabels && <span>Tự Vừa Khung</span>}
+            </button>
             <span 
               className="text-[10px] font-sans font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap cursor-help"
               title="Điều chỉnh tỷ lệ hiển thị bàn bài (Zoom)"
@@ -864,7 +942,7 @@ export default function FreeTarotWorkspace2D({
             </span>
             <input
               type="range"
-              min="55"
+              min="25"
               max="300"
               value={Math.round(zoom * 100)}
               onChange={(event) => setZoom(Number(event.target.value) / 100)}
